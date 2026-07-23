@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException
 from app import store
 from app.models import ProgressRecord
 from app.privacy import redact
+from app.support import build_support_context
 
 logger = logging.getLogger("student-progress")
 logging.basicConfig(level=logging.INFO, format="%(name)s %(levelname)s %(message)s")
@@ -33,6 +34,7 @@ def _get_student(student_id: str):
 def get_progress(student_id: str):
     student = _get_student(student_id)
     records = [r for r in store.PROGRESS if r.student_id == student_id]
+    logger.info("progress lookup %s", build_support_context(student, records))
     completed = sum(1 for r in records if r.completed)
     total = len(store.LESSONS)
     percentage = round(100 * completed / total) if total else 0
