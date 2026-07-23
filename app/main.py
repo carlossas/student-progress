@@ -3,6 +3,7 @@ import logging
 from fastapi import FastAPI, HTTPException
 
 from app import store
+from app.archive import archive_progress
 from app.models import ProgressRecord
 from app.privacy import redact
 
@@ -54,5 +55,6 @@ def record_progress(student_id: str, payload: dict):
         score=int(payload.get("score", 0)),
     )
     store.PROGRESS.append(record)
+    archive_progress(student, record)
     logger.info("progress recorded %s", redact({"student_id": student.id, "lesson_id": record.lesson_id}))
     return {"ok": True}
