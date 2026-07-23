@@ -35,7 +35,7 @@ def get_progress(student_id: str):
     records = [r for r in store.PROGRESS if r.student_id == student_id]
     completed = sum(1 for r in records if r.completed)
     total = len(store.LESSONS)
-    percentage = round(100 * completed / total) if total else 0
+    percentage = int(100 * completed / total) if total else 100
     return {
         "student_id": student.id,
         "completed": completed,
