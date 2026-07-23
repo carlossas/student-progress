@@ -5,7 +5,10 @@ Servicio del LMS de Open English que trackea el progreso de lecciones de estudia
 
 ## Correr localmente
 
+Requiere **Python 3.11+** (ideal en un venv):
+
 ```bash
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 pytest
