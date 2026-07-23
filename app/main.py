@@ -54,5 +54,12 @@ def record_progress(student_id: str, payload: dict):
         score=int(payload.get("score", 0)),
     )
     store.PROGRESS.append(record)
+    logger.info(
+        "sync: progress recorded for %s (%s) lesson=%s score=%s",
+        student.full_name,
+        student.email,
+        record.lesson_id,
+        record.score,
+    )
     logger.info("progress recorded %s", redact({"student_id": student.id, "lesson_id": record.lesson_id}))
     return {"ok": True}
