@@ -1,31 +1,37 @@
-# TEAM-STANDARDS — Open English LMS
+# Team Standards — Open English LMS
 
-Reglas del equipo. Todo PR se revisa contra este documento.
+All pull requests are reviewed against this document.
 
-## 1. Calidad de código
-- Código simple y legible; sin dead code ni TODOs sin ticket.
-- Errores manejados explícitamente; nada de `except: pass`.
-- Input externo siempre validado.
+## 1. Code quality
+
+- Code is simple and readable. No dead code. No TODOs without a ticket reference.
+- Errors are handled explicitly. Silent exception handling is not acceptable.
+- All external input is validated.
 
 ## 2. Testing
-- Todo cambio de lógica trae tests que **fallan si la lógica se rompe**.
-- Tests decorativos (asserts triviales, todo mockeado, no cubren el caso de negocio) cuentan como ausencia de tests.
-- Los tests documentan el comportamiento esperado, incluidos casos borde.
 
-## 3. PII y logging
-- Clasificación: `pii` (datos personales de cualquier usuario) y `pii-minor` (datos de menores de 18 — tratamiento más estricto). En este servicio: `full_name`, `email`, `birthdate` son PII; si `is_minor=True`, son `pii-minor`.
-- **Prohibido loguear PII**, directa o indirectamente (a través de helpers, `extra`, serialización de objetos). Usar `app.privacy.redact()`.
-- Los datos de menores nunca salen del servicio hacia destinos no aprobados (analytics, soporte, terceros) sin minimización y base legal documentada.
+- Every logic change includes tests that fail if the behavior breaks.
+- Tests that cannot detect a regression (trivial assertions, fully mocked logic, no coverage of the business case) do not count as test coverage.
+- Tests document expected behavior, including edge cases.
 
-## 4. Retención de datos
-- Todo dataset persistido o copiado declara su categoría de retención (`app.privacy.RETENTION_DAYS`).
-- Datos de menores: máximo 90 días salvo base legal documentada en el PR.
-- Prohibido crear copias secundarias de datos personales "por las dudas" o "para siempre": minimización de datos siempre.
+## 3. PII and logging
+
+- Classification: `pii` (personal data of any user) and `pii-minor` (personal data of users under 18, subject to stricter handling). In this service, `full_name`, `email`, and `birthdate` are PII; when `is_minor` is true, they are `pii-minor`.
+- PII must not be written to logs, directly or indirectly (through helper functions, `extra` fields, or object serialization). Use `app.privacy.redact()`.
+- Data belonging to minors must not leave this service (analytics, support tooling, third parties) without data minimization and a documented legal basis.
+
+## 4. Data retention
+
+- Every persisted or copied dataset declares its retention category in `app.privacy.RETENTION_DAYS`.
+- Data belonging to minors is retained for a maximum of 90 days unless a legal basis is documented in the pull request.
+- Secondary copies of personal data without a defined purpose and retention period are not permitted. Apply data minimization.
 
 ## 5. Secrets
-- Solo por variables de entorno. Un secret commiteado es incidente de seguridad, aunque sea de sandbox.
 
-## 6. Severidades para review
-- **S1 — bloquea merge:** exposición de PII (agravado si `pii-minor`), secrets commiteados, violación de retención/minimización de datos de menores.
-- **S2 — bloquea merge:** bugs de lógica que entregan datos incorrectos, lógica core sin tests reales o con tests decorativos.
-- **S3 — comenta, no bloquea:** estilo, naming, oportunidades de refactor.
+- Secrets are provided through environment variables only, never committed to the repository. A committed secret is treated as a security incident regardless of environment.
+
+## 6. Review severities
+
+- **S1 — blocks merge:** PII exposure (aggravated when `pii-minor` is involved), committed secrets, retention or minimization violations involving minors' data.
+- **S2 — blocks merge:** logic bugs that produce incorrect data; core logic without effective tests.
+- **S3 — comment, does not block:** style, naming, refactoring opportunities.
