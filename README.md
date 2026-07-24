@@ -1,11 +1,11 @@
 # student-progress
 
-Servicio del LMS de Open English que trackea el progreso de lecciones de estudiantes.
-**Algunos estudiantes son menores de edad** — leé `TEAM-STANDARDS.md` antes de tocar nada.
+Open English LMS service that tracks students' lesson progress.
+**Some students are minors** — read `TEAM-STANDARDS.md` before making any changes.
 
-## Correr localmente
+## Running locally
 
-Requiere **Python 3.11+** (ideal en un venv):
+Requires **Python 3.11+** (a virtual environment is recommended):
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
@@ -21,4 +21,4 @@ pytest
 - `GET /students/{id}/progress`
 - `POST /students/{id}/progress` — body: `{"lesson_id": "...", "score": 0-100}`
 
-Datos en memoria (ver `app/store.py`). No hay base de datos: el foco de este repo es el proceso de review, no la persistencia.
+Data is held in memory (see `app/store.py`). There is no database: the focus of this repository is the review process, not persistence.
