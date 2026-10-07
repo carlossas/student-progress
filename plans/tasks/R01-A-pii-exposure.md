@@ -8,7 +8,7 @@
   - sources: `full_name`, `email`, `birthdate`, `is_minor` (as attribute, dict key or kwarg);
   - sanitizer: `redact()`;
   - Critical sinks: logging, `print`, exception messages, route return values, outbound calls;
-  - High sink: new persisted collections.
+  - Critical sink: new persisted collections (raised from High on 2026-10-07, see `tests/gate/deterministic/test_severity_refinements.py`).
 - **P3** same file: `Student` objects reaching a sink through `__dict__`, `asdict()`, `vars()`, `str()`, `repr()` or f-strings.
 - **P4** `gate/deterministic/pii_alias.py`: PII-like identifiers on changed lines are written to `signals.json` (not posted).
 

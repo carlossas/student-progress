@@ -67,7 +67,7 @@ Field classification is defined in the **Personal data fields** table in [AGENTS
 | | → logging, `print`, exception/`HTTPException` messages | | Critical |
 | | → returned from a route handler or response model in plain text | | Critical |
 | | → outbound: HTTP clients, SMTP, analytics/support SDKs, queues, file export | | Critical |
-| | → persisted or copied (new collection, file, cache) | | High (needs retention, see A4) |
+| | → persisted or copied (new collection, file, cache) | | Critical (raised from High on 2026-10-07; see section 8) |
 | | → internal logic only | | not posted; forwarded to B |
 | P3 | **Whole-object exposure.** `Student` objects reaching any sink above through `__dict__`, `asdict()`, `vars()`, `str()`, `repr()` or f-strings. Dataclass `repr` prints every field. | `semgrep` | Critical |
 | P4 | **Alias signal.** New identifiers resembling PII (`name`, `mail`, `dob`, `age`, `minor`, `kid`, `child`, `junior`) on changed lines. Not posted; sent to B as hints. | regex script | signal only |
@@ -173,6 +173,9 @@ Deviations from the sections above, with the reason in [DECISIONS.md](../DECISIO
 | ruff `E501` as Low | Ignored in `gate/config/ruff.toml` | `ruff format` owns line length; long message strings can't be split |
 | AI tests `tests/gate/ai/test_rXX_*.py` | `tests/gate/ai/test_rXX_*_ai.py` | Avoids module-name clashes with the deterministic tests |
 | Logic bugs / style (B11, B12) | Reported under `AGENTS#9` (S2/S3 definitions) | They have no rule of their own |
+| P2 copy of personal data: High | **Critical** | Reviewing live PR #17: a copy of minors' data without retention is S1 (approved 2026-10-07) |
+| A9 and A10 both reported | A10 dropped when A9 fires | One root cause, one finding (live PR #15) |
+| Merge on identical (rule, file, line) | AI finding within ±3 lines of a script finding with the same rule is merged | Live PR #14 got two comments for one log call (PR #19) |
 
 ## 9. AI cost controls
 

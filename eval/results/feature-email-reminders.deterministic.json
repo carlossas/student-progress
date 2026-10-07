@@ -24,7 +24,7 @@
     "severity": "high",
     "source": "deterministic:change_policy",
     "file": "app/notifications.py",
-    "message": "Service code changed (app/notifications.py) but no test under `tests/` was added or updated.",
+    "message": "Service code changed (app/notifications.py) but no test under `tests/` was added or updated (this also covers the changed-line coverage gap).",
     "suggestion": "Add tests that fail if this behavior breaks, including edge cases (refactors too: prove nothing changed).",
     "line": null,
     "check": "A9"
@@ -38,16 +38,6 @@
     "suggestion": "Update the docs in the same PR: modules/diagrams/flows in ARCHITECTURE.md; endpoints, business rules and known gaps in API-AND-BUSINESS-RULES.md.",
     "line": null,
     "check": "A14"
-  },
-  {
-    "rule": "AGENTS#6",
-    "severity": "high",
-    "source": "deterministic:coverage",
-    "file": "app/notifications.py",
-    "message": "Changed-line coverage is 0% (minimum 85%). Uncovered lines: 2, 4, 7, 8, 11, 13.",
-    "suggestion": "Add tests that execute these lines and assert on the behavior (>= 85% of changed lines).",
-    "line": 2,
-    "check": "A10"
   },
   {
     "rule": "AGENTS#7",

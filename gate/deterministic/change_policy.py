@@ -27,7 +27,7 @@ def tests_touched(ctx: DiffContext) -> list[Finding]:
             source="deterministic:change_policy",
             check="A9",
             file=sources[0],
-            message=f"Service code changed ({', '.join(sources)}) but no test under `{TEST_DIR}/` was added or updated.",
+            message=f"Service code changed ({', '.join(sources)}) but no test under `{TEST_DIR}/` was added or updated (this also covers the changed-line coverage gap).",
             suggestion="Add tests that fail if this behavior breaks, including edge cases (refactors too: prove nothing changed).",
         )
     ]

@@ -25,16 +25,16 @@ The 8 open PRs are the golden set. The gate is treated as a system to measure (A
 <!-- eval:results:start -->
 | Pipeline | Precision | Recall | TP | FP | FN | Severity agreement |
 |---|---|---|---|---|---|---|
-| deterministic | 1.00 | 0.60 | 11 | 0 | 6 | 0.82 |
+| deterministic | 1.00 | 0.60 | 10 | 0 | 6 | 0.90 |
 | ai | 1.00 | 0.47 | 7 | 0 | 8 | 1.00 |
-| combined | 1.00 | 1.00 | 18 | 0 | 0 | 0.89 |
+| combined | 1.00 | 1.00 | 16 | 0 | 0 | 0.94 |
 
 Per severity (combined):
 
 | Severity | Findings | Precision | Expected | Recall |
 |---|---|---|---|---|
 | critical | 7 | 1.00 | 7 | 1.00 |
-| high | 10 | 1.00 | 7 | 1.00 |
+| high | 8 | 1.00 | 7 | 1.00 |
 | medium | 1 | 1.00 | 1 | 1.00 |
 | low | 0 | — | 0 | — |
 
@@ -44,9 +44,9 @@ Per PR (combined):
 |---|---|---|---|---|---|
 | `feature/lessons-pagination` | sound | pass | 0 | 0 | 0 |
 | `feature/score-validation` | block | block | 1 | 0 | 0 |
-| `fix/mobile-sync-visibility` | block | block | 2 | 0 | 0 |
+| `fix/mobile-sync-visibility` | block | block | 1 | 0 | 0 |
 | `feature/support-context` | block | block | 3 | 0 | 0 |
-| `feature/email-reminders` | block | block | 5 | 0 | 0 |
+| `feature/email-reminders` | block | block | 4 | 0 | 0 |
 | `feature/streaks` | block | block | 2 | 0 | 0 |
 | `feature/analytics-archive` | block | block | 4 | 0 | 0 |
 | `fix/progress-percentage` | block | block | 1 | 0 | 0 |
@@ -106,8 +106,13 @@ Each entry below explains one item of the list. `python -m gate eval --check-ana
 **Why:** `int()` vs `round()` and `else 100` are valid code with a passing test; the test even asserts the wrong 100%. Only domain knowledge (BR-4 in the API docs) says it is wrong.
 **Change:** The AI prompt receives `docs/API-AND-BUSINESS-RULES.md` as context so B11 can compare against BR-4. A mutation-style check (fail when a PR changes a documented business rule without changing its BR row) is in the backlog.
 
-### Severity disagreement (not an FP/FN)
-`feature/analytics-archive` was matched, but at **High** (A4 dataset without retention, P2 copy into a collection) while the ground truth says **Critical**: the copy holds minors' personal data kept indefinitely. The PR is still blocked (High blocks), so the outcome is right, but the severity under-states the risk. Backlog item 4 in DECISIONS.md: escalate to Critical when the copied payload contains personal fields.
+### Severity refinements after reviewing the live PRs (approved 2026-10-07)
+**Why:** reviewing the gate's comments on PRs #10–#18 as an architect found three issues, none of them a false positive:
+- #17: a copy of minors' personal data with no retention period was reported as High; it is S1 (Critical).
+- #15: "no tests touched" (A9) and "0% changed-line coverage" (A10) were two High findings for one root cause.
+- #14: the scripts and the AI flagged the same log call on neighbouring lines (59 and 60): two Critical comments for one problem.
+
+**Change:** copies of personal data into stored collections are Critical (P2); A10 is dropped when A9 already reports the change as untested; an AI finding within 3 lines of a script finding with the same rule is merged into it (PR #19). Severity agreement 0.88 → 0.94 combined (scripts alone 0.82 → 0.90); precision and recall stay 1.00. The docs rule (AGENTS#20) stays High: it fired on all 8 PRs, and that is intended.
 
 ## Trust policy
 
