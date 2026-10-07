@@ -7,7 +7,7 @@
   - `pull_request` on **all** branches;
   - no `paths-ignore`, and no label- or title-based skip conditions;
   - the `ai` job runs only when `github.base_ref` is `develop` or `main` (plan section 1).
-- `gate/setup/branch_protection.sh` (`gh api`) protects `develop` and `main`, requiring the checks `quality-gate/deterministic`, `quality-gate/ai` and `quality-gate/high`, and dismissing stale reviews. It is documented in the README.
+- `gate/setup/branch_protection.sh` (`gh api`) protects `develop` and `main`, requiring each branch's own checks `quality-gate/<branch>/critical` and `quality-gate/<branch>/high` plus 1 approving review, and dismissing stale reviews. It is documented in the README.
 
 ## Test
 `tests/gate/deterministic/test_r15_triggers.py::test_r15_triggers`

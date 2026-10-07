@@ -26,7 +26,7 @@ Both `develop` and `main` are protected: the gate's checks are required to merge
 | Severity | Maps to | Result | Log | PR comment | Merge |
 |----------|---------|--------|-----|------------|-------|
 | **Critical** | S1 | ❌ Job fails with error | Job log + run summary | Inline on file/line with remediation and suggested code (when the tool can provide it) | **Blocked** |
-| **High** | S2 | Job succeeds, sets required status `quality-gate/high` to failure | Run summary | **Request changes** review + inline comments | **Blocked** |
+| **High** | S2 | Job succeeds, sets required status `quality-gate/<base>/high` to failure | Run summary | **Request changes** review + inline comments | **Blocked** |
 | **Medium** | S3 | ✅ | Run summary | Inline comment | Allowed |
 | **Low** | S3 | ✅ | Run summary | One grouped summary comment | Allowed |
 
@@ -169,7 +169,7 @@ Deviations from the sections above, with the reason in [DECISIONS.md](../DECISIO
 | semgrep taint rules (P2, P3, A5, A7) | `gate/deterministic/pii_flow.py`, `validation.py` (Python `ast`), with one level of cross-function summaries | Same code in CI and in the hooks on Windows; catches PII returned by helpers (ADR-1) |
 | gitleaks (A1) | `gate/deterministic/secrets_scan.py` (patterns + `.env`/key files + every commit in the range) | No extra binary; same code in the pre-commit hook |
 | diff-cover (A10) | coverage.py XML parsed in `gate/report/adapters.py` | One less dependency; exact changed lines from the gate's own diff |
-| Status `quality-gate/high` only | Two required statuses: `quality-gate/critical` and `quality-gate/high` | Lets the override lift blocks without re-running jobs (ADR-3) |
+| Status `quality-gate/high` only | Two required statuses per base branch: `quality-gate/<base>/critical` and `quality-gate/<base>/high` | The override lifts blocks without re-running jobs (ADR-3); per-base names because one commit can head PRs into several branches (live PRs #4/#10) |
 | ruff `E501` as Low | Ignored in `gate/config/ruff.toml` | `ruff format` owns line length; long message strings can't be split |
 | AI tests `tests/gate/ai/test_rXX_*.py` | `tests/gate/ai/test_rXX_*_ai.py` | Avoids module-name clashes with the deterministic tests |
 | Logic bugs / style (B11, B12) | Reported under `AGENTS#9` (S2/S3 definitions) | They have no rule of their own |

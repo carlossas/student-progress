@@ -36,8 +36,8 @@ Two pipelines review every PR against [AGENTS.md](AGENTS.md):
 
 | Severity | Effect on the PR |
 |----------|------------------|
-| Critical | Check fails (`quality-gate/critical`), inline comment with the fix, merge blocked |
-| High | Request-changes review (`quality-gate/high`), merge blocked |
+| Critical | Check fails (`quality-gate/<base>/critical`), inline comment with the fix, merge blocked |
+| High | Request-changes review (`quality-gate/<base>/high`), merge blocked |
 | Medium / Low | Comment only, merge allowed |
 
 Pipeline details, AI cost and model outlook: [docs/PIPELINES.md](docs/PIPELINES.md). How it was designed and measured: [plans/quality-gate-classification.md](plans/quality-gate-classification.md), [EVAL.md](EVAL.md), [DECISIONS.md](DECISIONS.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#quality-gate).
@@ -72,7 +72,7 @@ The hooks use `.venv` when present (override with `GATE_PYTHON`). Self-review wi
 
 1. **Secret** `GEMINI_API_KEY` (Settings → Secrets and variables → Actions). Never commit it (AGENTS#8).
 2. **Variables** (optional): `GEMINI_MODEL` (default `gemini-3.8-flash`), `GEMINI_THINKING_LEVEL` (default `LOW`), `GEMINI_MAX_OUTPUT_TOKENS` (default `2048`), `GATE_MODE` (`shadow` by default; set to `enforce` once [EVAL.md](EVAL.md) validates the gate, AGENTS#14).
-3. **Branch protection** on `develop` and `main`, requiring `quality-gate/critical`, `quality-gate/high` and 1 approving review:
+3. **Branch protection** on `develop` and `main`, requiring that branch's `quality-gate/<branch>/critical`, `quality-gate/<branch>/high` and 1 approving review:
    ```bash
    bash gate/setup/branch_protection.sh
    ```

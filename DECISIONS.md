@@ -16,11 +16,13 @@ Mini-ADRs for the quality gate. Context and rule numbers: [AGENTS.md](AGENTS.md)
 
 **Why.** A PR must not be able to relax the rules it is judged by, and untrusted code must not run next to the API key. PR text is passed to Gemini as untrusted data and the system prompt forbids following instructions in it.
 
+**Compatibility rule.** Because the workflow file comes from the PR and the gate code from the base branch, the workflow → gate interface must stay backward compatible: new inputs travel in environment variables (an older gate ignores them), never as new CLI flags. Learned on PR #21, whose new `--base-ref` flag crashed `develop`'s older gate; the base branch now comes from `GITHUB_BASE_REF`.
+
 **Limits.** On `pull_request` events GitHub runs the workflow file from the PR itself, so a PR could edit `quality-gate.yml`. Mitigations: the required checks are commit statuses that only the real gate posts, `workflow_policy` (R15) flags changes to the gate workflow, and the next step is a CODEOWNERS rule on `.github/` and `gate/`. The PR that introduces the gate necessarily runs its own copy (bootstrap, logged as a warning).
 
 ## ADR-3 · Blocking through two commit statuses, with a logged production override
 
-**Decision.** The `report` job is the single policy point (`gate/report/actions.py`). It sets `quality-gate/critical` and `quality-gate/high`; branch protection on `develop` and `main` requires both. Critical also fails the job with annotations; High posts a request-changes review. `/gate-override <reason>` by a repo `admin`/`maintain` (or a member of `GATE_OVERRIDE_TEAM`) flips both statuses for that commit and records who, when, why and which findings.
+**Decision.** The `report` job is the single policy point (`gate/report/actions.py`). It sets `quality-gate/<base>/critical` and `quality-gate/<base>/high`; branch protection on each protected branch requires its own pair (e.g. `quality-gate/develop/critical`). The base branch is in the name because a commit status belongs to a commit, not a PR: when one branch heads PRs into `develop` and `main` (seen live with PRs #4 and #10), unnamed checks were overwritten by whichever run finished last. Critical also fails the job with annotations; High posts a request-changes review. `/gate-override <reason>` by a repo `admin`/`maintain` (or a member of `GATE_OVERRIDE_TEAM`) flips both statuses for that commit and records who, when, why and which findings.
 
 **Why.** Statuses can be overridden without re-running jobs and without admin bypass of branch protection, and the override is visible on the PR. A crashed check or a failed Gemini call is a blocking *gate error*, never a silent pass.
 

@@ -120,8 +120,8 @@ Based on the runs above (deterministic, and AI with `gemini-3.8-flash`, LOW thin
 
 | Severity | Source | Precision measured | Policy |
 |----------|--------|--------------------|--------|
-| Critical | Deterministic | 1.00 (4/4), 0 FP on the 2 sound PRs | **Block automatically** (fail + `quality-gate/critical`). |
-| High | Deterministic | 1.00 (6/6) | **Block** with a request-changes review (`quality-gate/high`). |
+| Critical | Deterministic | 1.00 (4/4), 0 FP on the 2 sound PRs | **Block automatically** (fail + `quality-gate/<base>/critical`). |
+| High | Deterministic | 1.00 (6/6) | **Block** with a request-changes review (`quality-gate/<base>/high`). |
 | Medium / Low | Deterministic | 1.00 (1/1) / none | Comment only. |
 | Critical | AI | 1.00 (3/3), identical across 3 runs (fixed seed) | **Block automatically** (team decision, AGENTS#14). |
 | High | AI | 1.00 (4/4) | **Block** (request-changes review). |

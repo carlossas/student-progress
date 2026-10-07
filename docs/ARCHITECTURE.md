@@ -151,7 +151,7 @@ flowchart TB
         ai --> report
     end
 
-    report -- "quality-gate/critical<br/>quality-gate/high" --> protect{{"branch protection<br/>develop · main"}}
+    report -- "quality-gate/&lt;base&gt;/critical<br/>quality-gate/&lt;base&gt;/high" --> protect{{"branch protection<br/>develop · main"}}
     report -- "inline comments<br/>request changes" --> pr
     override(["/gate-override reason<br/>gate-override.yml"]) -. "production approver" .-> protect
 

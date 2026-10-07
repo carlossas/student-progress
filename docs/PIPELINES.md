@@ -108,8 +108,8 @@ Source: [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing) and 
 
 | Severity | PR effect | Required check |
 |---|---|---|
-| Critical | Job fails with annotations, inline comment with the fix, merge blocked | `quality-gate/critical` |
-| High | Request-changes review, merge blocked | `quality-gate/high` |
+| Critical | Job fails with annotations, inline comment with the fix, merge blocked | `quality-gate/<base>/critical` |
+| High | Request-changes review, merge blocked | `quality-gate/<base>/high` |
 | Medium / Low | Comment, merge allowed | — |
 
 `GATE_MODE=shadow` (default) only comments; `enforce` blocks. Switch to `enforce` once [EVAL.md](../EVAL.md) validates the gate. Override: a repo `admin`/`maintain` (or a member of `GATE_OVERRIDE_TEAM`) comments `/gate-override <reason>`; it applies to that commit and is recorded on the PR.
