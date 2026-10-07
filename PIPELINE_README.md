@@ -105,7 +105,7 @@ A typical review costs about a third of a cent ($0.0027–$0.0041 measured); a v
    - secret `GEMINI_API_KEY`;
    - optional variables `GEMINI_MODEL`, `GEMINI_THINKING_LEVEL`, `GEMINI_MAX_OUTPUT_TOKENS`, `GEMINI_MAX_INPUT_TOKENS`, `GATE_ACTIONS_USD_PER_MINUTE` (for the cost line; default `0.006`);
    - variable `GATE_MODE`: `shadow` (comment only, the default) or `enforce` (block).
-2. Protect `develop` and `main` so the gate's checks are required:
+2. Protect `develop` and `main`: the gate's two checks and 1 approving review are required to merge:
    ```bash
    bash gate/setup/branch_protection.sh
    ```

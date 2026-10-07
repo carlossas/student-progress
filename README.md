@@ -72,7 +72,7 @@ The hooks use `.venv` when present (override with `GATE_PYTHON`). Self-review wi
 
 1. **Secret** `GEMINI_API_KEY` (Settings → Secrets and variables → Actions). Never commit it (AGENTS#8).
 2. **Variables** (optional): `GEMINI_MODEL` (default `gemini-3.8-flash`), `GEMINI_THINKING_LEVEL` (default `LOW`), `GEMINI_MAX_OUTPUT_TOKENS` (default `2048`), `GATE_MODE` (`shadow` by default; set to `enforce` once [EVAL.md](EVAL.md) validates the gate, AGENTS#14).
-3. **Branch protection** on `develop` and `main`, requiring `quality-gate/critical` and `quality-gate/high`:
+3. **Branch protection** on `develop` and `main`, requiring `quality-gate/critical`, `quality-gate/high` and 1 approving review:
    ```bash
    bash gate/setup/branch_protection.sh
    ```
