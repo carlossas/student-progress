@@ -1,13 +1,14 @@
 """Severity → PR action (AGENTS#9, plan section 2). Pure policy: no I/O.
 
-| Severity | Job          | quality-gate/critical | quality-gate/high | Review          | Comment              |
+| Severity | Job          | .../<base>/critical   | .../<base>/high   | Review          | Comment              |
 |----------|--------------|-----------------------|-------------------|-----------------|----------------------|
 | Critical | exit 1 + log | failure               | -                 | REQUEST_CHANGES | inline + suggestion  |
 | High     | exit 0       | -                     | failure           | REQUEST_CHANGES | inline               |
 | Medium   | exit 0       | -                     | -                 | COMMENT         | inline               |
 | Low      | exit 0       | -                     | -                 | COMMENT         | grouped in summary   |
 
-The two commit statuses are the required checks on protected branches; a production
+The two commit statuses, `quality-gate/<base>/critical` and `quality-gate/<base>/high`, are the
+required checks on protected branches; a production
 override flips them to success (see override.py). In shadow mode nothing blocks.
 """
 
@@ -16,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from gate.config import STATUS_CRITICAL, STATUS_HIGH
+from gate.config import status_contexts
 from gate.report.finding import Finding, sort_findings
 
 MODES = ("enforce", "shadow")
@@ -41,6 +42,7 @@ def decide(
     mode: str = "enforce",
     gate_errors: list[str] | tuple[str, ...] = (),
     commentable: Callable[[Finding], bool] | None = None,
+    base: str = "develop",
 ) -> Decision:
     if mode not in MODES:
         raise ValueError(f"GATE_MODE must be one of {MODES}, got {mode!r}")
@@ -72,7 +74,7 @@ def decide(
     inline = [f for f in findings if f.severity != "low" and commentable(f)]
     return Decision(
         exit_code=1 if enforce and (criticals or gate_errors) else 0,
-        statuses={STATUS_CRITICAL: critical_status, STATUS_HIGH: high_status},
+        statuses=dict(zip(status_contexts(base), (critical_status, high_status), strict=True)),
         review_event=event,
         inline=inline,
         summary_only=[f for f in findings if f not in inline],

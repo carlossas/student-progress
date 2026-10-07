@@ -5,7 +5,7 @@
 ## Scope
 `gate/report/actions.py` turns a list of findings into PR actions, following section 2 of the plan:
 
-| Severity | Job | `quality-gate/high` status | Review | Comment |
+| Severity | Job | `quality-gate/<base>/high` status | Review | Comment |
 |----------|-----|----------------------------|--------|---------|
 | Critical | exit 1 + error log | — | Request changes | Inline, with suggestion |
 | High | exit 0 | failure | Request changes | Inline |

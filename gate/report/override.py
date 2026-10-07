@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from gate.config import STATUS_CRITICAL, STATUS_HIGH
+from gate.config import status_contexts
 from gate.report.github import STICKY_MARKER, blocking_fingerprints
 
 COMMAND = re.compile(r"^/gate-override\b[ \t]*(.*)$", re.M)
@@ -61,7 +61,7 @@ def handle(gh, number: int, user: str, body: str, run_url: str | None = None) ->
         return OverrideResult(False, message)
 
     pr = gh.pr(number)
-    sha = pr["head"]["sha"]
+    sha, base = pr["head"]["sha"], pr["base"]["ref"]
     sticky = next((c["body"] for c in gh.issue_comments(number) if STICKY_MARKER in (c.get("body") or "")), "")
     record = {
         "user": user,
@@ -69,10 +69,11 @@ def handle(gh, number: int, user: str, body: str, run_url: str | None = None) ->
         "timestamp": datetime.now(UTC).isoformat(timespec="seconds"),
         "reason": reason,
         "commit": sha,
+        "base": base,
         "findings": blocking_fingerprints(sticky),
     }
     description = f"Overridden by @{user}: {reason}"
-    for context in (STATUS_CRITICAL, STATUS_HIGH):
+    for context in status_contexts(base):
         gh.set_status(sha, context, "success", description, run_url)
     message = (
         f"⚠️ **Quality gate overridden** by @{user} ({why}) at {record['timestamp']} for commit `{sha[:8]}`.\n\n"

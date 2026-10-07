@@ -1,8 +1,9 @@
 name: quality-gate
 
 # Every PR goes through the gate (AGENTS#15): no path filters, no skip labels.
-# The required checks on develop/main are the commit statuses `quality-gate/critical` and
-# `quality-gate/high` set by the `report` job (see gate/setup/branch_protection.sh).
+# The required checks on develop/main are the commit statuses `quality-gate/<base>/critical` and
+# `quality-gate/<base>/high` set by the `report` job, one pair per base branch, because a commit
+# can head PRs into several branches (see gate/setup/branch_protection.sh).
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -198,5 +199,5 @@ jobs:
           NEEDS_JSON: ${{ toJSON(needs) }}
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: >-
-          python -m gate report --in "$GITHUB_WORKSPACE/gate-out" --mode "$GATE_MODE" --needs "$NEEDS_JSON"
+          python -m gate report --in "$GITHUB_WORKSPACE/gate-out" --mode "$GATE_MODE" --needs "$NEEDS_JSON" --base-ref "$GITHUB_BASE_REF"
           --publish --pr ${{ github.event.pull_request.number }} --sha ${{ github.event.pull_request.head.sha }}

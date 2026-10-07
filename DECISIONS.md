@@ -20,7 +20,7 @@ Mini-ADRs for the quality gate. Context and rule numbers: [AGENTS.md](AGENTS.md)
 
 ## ADR-3 · Blocking through two commit statuses, with a logged production override
 
-**Decision.** The `report` job is the single policy point (`gate/report/actions.py`). It sets `quality-gate/critical` and `quality-gate/high`; branch protection on `develop` and `main` requires both. Critical also fails the job with annotations; High posts a request-changes review. `/gate-override <reason>` by a repo `admin`/`maintain` (or a member of `GATE_OVERRIDE_TEAM`) flips both statuses for that commit and records who, when, why and which findings.
+**Decision.** The `report` job is the single policy point (`gate/report/actions.py`). It sets `quality-gate/<base>/critical` and `quality-gate/<base>/high`; branch protection on each protected branch requires its own pair (e.g. `quality-gate/develop/critical`). The base branch is in the name because a commit status belongs to a commit, not a PR: when one branch heads PRs into `develop` and `main` (seen live with PRs #4 and #10), unnamed checks were overwritten by whichever run finished last. Critical also fails the job with annotations; High posts a request-changes review. `/gate-override <reason>` by a repo `admin`/`maintain` (or a member of `GATE_OVERRIDE_TEAM`) flips both statuses for that commit and records who, when, why and which findings.
 
 **Why.** Statuses can be overridden without re-running jobs and without admin bypass of branch protection, and the override is visible on the PR. A crashed check or a failed Gemini call is a blocking *gate error*, never a silent pass.
 

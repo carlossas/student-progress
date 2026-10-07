@@ -3,6 +3,8 @@
 #   bash gate/setup/branch_protection.sh [owner/repo] [required approvals, default 1]
 # Requires an authenticated gh CLI. Branches that don't exist yet are skipped with a warning.
 # Admins are not forced (enforce_admins=false) so a solo maintainer can still merge.
+# Check names carry the base branch: a commit that heads PRs into develop and main gets one
+# pair of checks per PR instead of sharing (and overwriting) one pair.
 set -euo pipefail
 
 REPO="${1:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"
@@ -17,7 +19,7 @@ for BRANCH in develop main; do
 {
   "required_status_checks": {
     "strict": true,
-    "contexts": ["quality-gate/critical", "quality-gate/high"]
+    "contexts": ["quality-gate/$BRANCH/critical", "quality-gate/$BRANCH/high"]
   },
   "enforce_admins": false,
   "required_pull_request_reviews": {
@@ -27,5 +29,5 @@ for BRANCH in develop main; do
   "restrictions": null
 }
 JSON
-  echo "protected: $REPO@$BRANCH requires quality-gate/critical, quality-gate/high and $APPROVALS approval(s)"
+  echo "protected: $REPO@$BRANCH requires quality-gate/$BRANCH/critical, quality-gate/$BRANCH/high and $APPROVALS approval(s)"
 done

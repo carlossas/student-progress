@@ -118,7 +118,7 @@ A typical review costs about a third of a cent ($0.0027–$0.0041 measured); a v
    - an **ai** job for PRs into `develop`/`main`;
    - a **report** job that comments and sets the checks.
 3. Read the results:
-   - **Checks** `quality-gate/critical` and `quality-gate/high`: red means blocked.
+   - **Checks** `quality-gate/<base>/critical` and `quality-gate/<base>/high` (e.g. `quality-gate/develop/critical`): red means blocked. They are named per base branch, so a branch with PRs into both `develop` and `main` gets one pair of checks per PR.
    - **A summary comment** on the PR, updated on each push, with every finding and the cost of that run (AI + CI).
    - **Inline comments** with the suggested fix on the lines concerned.
    - In `shadow` mode (the default) the checks stay green and read `[shadow] 2 critical finding(s)`, and the review is a comment. Set `GATE_MODE=enforce` to turn them red and block.
