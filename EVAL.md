@@ -74,6 +74,14 @@ Each entry below explains one item of the list. `python -m gate eval --check-ana
 **Why:** with `temperature=0` alone, 3 identical reviews returned the same Critical findings but a High finding (unknown student id → 500) appeared in only some runs: a re-run could flip a PR between blocked and passing. Google's 3.8 Flash notes say temperature is no longer the knob it was.
 **Change:** a fixed sampling `seed` in `gate/ai/config.py`. Three runs are now byte-identical (same findings, lines and output tokens); R14-B passes.
 
+### R09-B AI test too strict (fixed)
+**Why:** in CI (`gate-eval` on PR #9) the R09-B test failed: it required a Low style note on the variable `x2` next to the High logic bug. With the fixed seed the model consistently reports only the bug (correct, on the right line). Style notes are optional by design, so the test was wrong, not the gate.
+**Change:** the test now requires the High B11 finding and only checks that any style note is Low. All 10 AI tests pass.
+
+### Real environment check (PR #10, 2026-10-07)
+**Why:** golden PR #4 (`feature/support-context`) opened against `develop` once the gate was merged. The gate ran from `develop`'s own copy and reported 2 Critical (`AGENTS#1` log via helper, scripts; `AGENTS#4` minimization, Gemini) and 2 High (`AGENTS#6` no tests; `AGENTS#20` docs), matching the ground truth (`AGENTS#20` is a process rule, not scored). Cost $0.028.
+**Change:** none needed.
+
 ### fn-pr2-score-500
 **Why:** `payload: dict` (the A7 trigger) is on an unchanged line, so A7 doesn't fire, and `int(...)` on untrusted input is not a pattern the scripts flag: whether a 500 is reachable depends on the input contract.
 **Change:** none in Pipeline A; B7 owns business-level validation and found it. Candidate deterministic check for the backlog: `int()`/`float()` on request data outside a `try` in a route handler.
