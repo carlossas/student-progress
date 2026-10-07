@@ -6,3 +6,12 @@ requires-python = ">=3.11"
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+# Gate fixtures are data (some look like test files), never collected.
+norecursedirs = ["tests/gate/fixtures", ".*", "node_modules"]
+# AI tests call Gemini (cost): opt in with `pytest -m ai`.
+addopts = "-m 'not ai'"
+markers = ["ai: calls the Gemini API; needs GEMINI_API_KEY"]
+
+[tool.ruff]
+# Gate fixtures contain deliberate violations.
+extend-exclude = ["tests/gate/fixtures"]

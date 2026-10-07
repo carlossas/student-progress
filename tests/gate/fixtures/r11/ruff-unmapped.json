@@ -1,0 +1,13 @@
+[
+  {
+    "cell": null,
+    "code": "XYZ999",
+    "end_location": {"column": 2, "row": 3},
+    "filename": "app/main.py",
+    "fix": null,
+    "location": {"column": 1, "row": 3},
+    "message": "A rule nobody mapped",
+    "noqa_row": 3,
+    "url": null
+  }
+]

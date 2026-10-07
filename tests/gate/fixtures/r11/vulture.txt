@@ -1,0 +1,2 @@
+app/main.py:31: unreachable code after 'return' (100% confidence)
+app/main.py:40: unused variable 'tmp' (100% confidence)

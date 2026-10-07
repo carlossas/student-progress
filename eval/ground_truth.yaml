@@ -1,0 +1,114 @@
+# Ground truth for the 8 golden PRs (AGENTS#12).
+# Written from reading each diff against AGENTS.md, independently of the gate's output.
+#
+# expected:   problems the gate must report (recall is measured on these).
+# acceptable: debatable findings that are neither rewarded nor penalized.
+# A finding matches an item when the rule is equal, the file is equal (when given) and the
+# line falls inside `lines` +/- line_window (file-level findings match any line of the file).
+#
+# Scored rules: the team standards (AGENTS#1-9). Process rules (#16 README, #18 records,
+# #20 docs) are reported by the gate but not scored: on these pre-gate branches they fire
+# on every PR by construction and would inflate precision.
+
+scope_rules: [AGENTS#1, AGENTS#2, AGENTS#3, AGENTS#4, AGENTS#5, AGENTS#6, AGENTS#7, AGENTS#8, AGENTS#9]
+line_window: 3
+acceptable_everywhere:
+  - {rule: AGENTS#7, severity: low}   # formatting/style
+  - {rule: AGENTS#9, severity: low}   # naming/refactoring ideas
+
+prs:
+  - branch: feature/lessons-pagination
+    title: Add pagination to lessons list
+    body: The catalog will grow to hundreds of lessons; adds limit/offset with validation and tests.
+    verdict: sound
+    expected: []
+    acceptable:
+      - {rule: AGENTS#5, file: app/main.py}   # manual 422 instead of Query(ge=, le=): style-level
+      - {rule: AGENTS#6}                      # boundary cases (limit=100/101) could be tested
+
+  - branch: feature/score-validation
+    title: Validate lesson and score on progress recording
+    body: We were accepting any lesson_id and out-of-range scores. Adds validation and tests.
+    verdict: sound
+    expected: []
+    acceptable:
+      - {rule: AGENTS#5, file: app/main.py}   # non-numeric score still raises a 500 (pre-existing gap)
+      - {rule: AGENTS#6}                      # tests mutate shared in-memory state
+
+  - branch: fix/mobile-sync-visibility
+    title: Add sync visibility for mobile progress bug
+    body: Support reports progress not showing up after using the mobile app. Adds logging so reported cases can be traced.
+    verdict: block
+    expected:
+      - {id: pr3-pii-in-logs, rule: AGENTS#1, severity: critical, file: app/main.py, lines: [57, 63],
+         why: "full_name and email (minors' data) logged in plain text"}
+    acceptable:
+      - {rule: AGENTS#6}   # logging-only change without tests
+      - {rule: AGENTS#2}   # logs consumed by support = data leaving the service
+
+  - branch: feature/support-context
+    title: "Support tooling: context on progress lookups"
+    body: Support loses 20 minutes per ticket gathering data from 3 systems. This helper logs a compact context on each lookup.
+    verdict: block
+    expected:
+      - {id: pr4-pii-in-logs, rule: AGENTS#1, severity: critical, file: app/main.py, lines: [37, 37],
+         why: "name, email and birthdate logged on every lookup, through a helper"}
+      - {id: pr4-not-minimized, rule: AGENTS#4, severity: critical, file: app/support.py, lines: [4, 10],
+         why: "support context carries name/email/birthdate where student_id would do"}
+      - {id: pr4-no-tests, rule: AGENTS#6, severity: high,
+         why: "new helper without tests"}
+    acceptable:
+      - {rule: AGENTS#1, file: app/support.py}   # pointing at the helper instead of the log call
+      - {rule: AGENTS#2}                         # minors' data handed to support tooling
+
+  - branch: feature/email-reminders
+    title: Scaffolding for inactivity email reminders
+    body: First step for email reminders. Scaffolding only, nothing is sent yet.
+    verdict: block
+    expected:
+      - {id: pr5-secret, rule: AGENTS#8, severity: critical, file: app/notifications.py, lines: [7, 7],
+         why: "SendGrid API key committed"}
+      - {id: pr5-email-in-logs, rule: AGENTS#1, severity: critical, file: app/notifications.py, lines: [13, 13],
+         why: "recipient email logged in plain text"}
+      - {id: pr5-todo, rule: AGENTS#7, severity: medium, file: app/notifications.py, lines: [6, 6],
+         why: "TODO without a ticket"}
+      - {id: pr5-no-tests, rule: AGENTS#6, severity: high,
+         why: "new module without tests"}
+    acceptable:
+      - {rule: AGENTS#2}   # planned emails to a third party (SendGrid) without documented basis
+
+  - branch: feature/streaks
+    title: Lesson streak calculation
+    body: Consecutive-day streak calculation for gamification. Includes tests.
+    verdict: block
+    expected:
+      - {id: pr6-streak-bug, rule: AGENTS#9, severity: high, file: app/streaks.py, lines: [5, 14],
+         why: "starts counting yesterday: today's activity never counts (docstring says ending today)"}
+      - {id: pr6-weak-tests, rule: AGENTS#6, severity: high, file: tests/test_streaks.py, lines: [1, 17],
+         why: "isinstance / >= 0 assertions can't detect a regression"}
+    acceptable: []
+
+  - branch: feature/analytics-archive
+    title: Archive progress events for cohort analytics
+    body: Analytics needs to slice cohorts without joins. Archives each progress event with student attributes.
+    verdict: block
+    expected:
+      - {id: pr7-no-retention, rule: AGENTS#3, severity: critical, file: app/archive.py, lines: [1, 22],
+         why: "copy of minors' personal data kept indefinitely, no RETENTION_DAYS category"}
+      - {id: pr7-not-minimized, rule: AGENTS#4, severity: critical, file: app/archive.py, lines: [11, 22],
+         why: "copies full_name, birthdate, is_minor for analytics"}
+      - {id: pr7-no-tests, rule: AGENTS#6, severity: high,
+         why: "new archive logic without tests"}
+    acceptable:
+      - {rule: AGENTS#2}                       # minors' data handed to the analytics team
+      - {rule: AGENTS#1, file: app/archive.py}
+
+  - branch: fix/progress-percentage
+    title: Fix percentage rounding inconsistencies
+    body: The app reports percentages inconsistent with the backend. Unifies the calculation and covers the no-lessons edge case.
+    verdict: block
+    expected:
+      - {id: pr8-wrong-percentage, rule: AGENTS#9, severity: high, file: app/main.py, lines: [38, 38],
+         why: "int() truncates (2/3 -> 66) and an empty catalog reports 100% complete"}
+    acceptable:
+      - {rule: AGENTS#6, file: tests/test_progress.py}   # the new test locks in the wrong 100%

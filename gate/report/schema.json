@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Quality gate finding",
+  "description": "One actionable finding (AGENTS#11). Shared by the deterministic and AI pipelines.",
+  "type": "object",
+  "required": ["rule", "severity", "source", "file", "message", "suggestion"],
+  "additionalProperties": false,
+  "properties": {
+    "rule": { "type": "string", "pattern": "^AGENTS#[0-9]+$", "description": "Golden rule violated, e.g. AGENTS#1." },
+    "severity": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+    "source": { "type": "string", "description": "deterministic:<check> or ai:gemini" },
+    "check": { "type": "string", "description": "Check id from the plan, e.g. P2, A6, B1." },
+    "file": { "type": "string", "description": "Repo-relative path." },
+    "line": { "type": ["integer", "null"], "minimum": 1, "description": "Null for file-level findings." },
+    "message": { "type": "string", "minLength": 1 },
+    "suggestion": { "type": "string", "minLength": 1, "description": "How to fix it; code when possible." }
+  }
+}

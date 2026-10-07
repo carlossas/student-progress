@@ -1,0 +1,1 @@
+{"title": "Typed body for progress recording", "body": "Uses a Pydantic model for the progress body."}

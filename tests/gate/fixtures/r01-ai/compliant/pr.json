@@ -1,0 +1,1 @@
+{"title": "Reminders and profile", "body": "Adds a reminder endpoint (logs only the pseudonymous student_id) and a profile endpoint returning lesson counts."}
