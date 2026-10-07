@@ -1,0 +1,19 @@
+{
+  "model": "gemini-3.8-flash",
+  "cost": {
+    "model": "gemini-3.8-flash",
+    "prompt_tokens": 0,
+    "cached_tokens": 0,
+    "output_tokens": 0,
+    "thinking_tokens": 0,
+    "calls": 0,
+    "input_usd": 0.0,
+    "output_usd": 0.0,
+    "thinking_usd": 0.0,
+    "total_usd": 0.0,
+    "cache_savings_usd": 0.0,
+    "rate_known": true,
+    "original_total_usd": 0.00269
+  },
+  "dropped": []
+}

@@ -1,0 +1,12 @@
+[
+  {
+    "rule": "AGENTS#1",
+    "severity": "critical",
+    "source": "ai:gemini",
+    "file": "app/main.py",
+    "message": "Personal data (`student.email`) is logged in plain text. Any student may be a minor, violating privacy policy.",
+    "suggestion": "Remove student.email and student.full_name from logging, using only student.id.",
+    "line": 60,
+    "check": "B1"
+  }
+]
