@@ -10,7 +10,7 @@ to helpers that return them, and whole `Student` objects serialized (`asdict`, `
 | logging / print / exception messages              | AGENTS#1  | critical |
 | return value of a FastAPI route                   | AGENTS#1  | critical |
 | outbound: HTTP clients, SMTP, SDKs, file exports  | AGENTS#2  | critical |
-| copy into a module-level collection               | AGENTS#3  | high     |
+| copy into a module-level collection               | AGENTS#3  | critical |
 
 Taint is tracked inside each function, plus one level of "this helper returns personal
 data / a Student" summaries across all service modules. Anything subtler (renamed fields,
@@ -79,9 +79,11 @@ SINK_RULES = {
         "an outbound call (HTTP/email/SDK/file export)",
         "Send only minimized, pseudonymous data (`student_id`), document the legal basis in the PR, or remove the call.",
     ),
+    # Critical (approved 2026-10-07): any student record may belong to a minor, and a copy of
+    # personal data without a retention category is the S1 case "retention violation on minors' data".
     "persisted": (
         "AGENTS#3",
-        "high",
+        "critical",
         "a copy stored in a module-level collection",
         "Store `student_id` instead of personal fields, and declare the dataset's category in `RETENTION_DAYS`.",
     ),

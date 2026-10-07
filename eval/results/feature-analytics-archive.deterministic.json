@@ -1,7 +1,7 @@
 [
   {
     "rule": "AGENTS#3",
-    "severity": "high",
+    "severity": "critical",
     "source": "deterministic:pii_flow",
     "file": "app/archive.py",
     "message": "Personal data (`student.full_name`) reaches a copy stored in a module-level collection in plain text.",
@@ -24,7 +24,7 @@
     "severity": "high",
     "source": "deterministic:change_policy",
     "file": "app/archive.py",
-    "message": "Service code changed (app/archive.py, app/main.py) but no test under `tests/` was added or updated.",
+    "message": "Service code changed (app/archive.py, app/main.py) but no test under `tests/` was added or updated (this also covers the changed-line coverage gap).",
     "suggestion": "Add tests that fail if this behavior breaks, including edge cases (refactors too: prove nothing changed).",
     "line": null,
     "check": "A9"

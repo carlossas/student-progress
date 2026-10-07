@@ -53,7 +53,7 @@ What it checks (rule numbers link the behavior to [AGENTS.md](../AGENTS.md)):
 
 | Area | Checks | Rules | Severity |
 |---|---|---|---|
-| Personal data | Field registry in sync; personal fields reaching logs, API responses, error messages or outbound calls, including through helper functions and whole-object serialization; copies into stored collections | #1, #2, #3 | Critical (copies: High) |
+| Personal data | Field registry in sync; personal fields reaching logs, API responses, error messages or outbound calls, including through helper functions and whole-object serialization; copies into stored collections | #1, #2, #3 | Critical |
 | Retention | Minors' retention ≤ 90 days; new datasets declare a retention category | #3 | Critical / High |
 | Secrets | API keys, tokens, `.env`/key files in the diff and in every commit of the PR | #8 | Critical |
 | Input & errors | Route handlers taking raw `dict`; bare/broad/silent `except` | #5 | High |

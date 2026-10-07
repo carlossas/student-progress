@@ -14,7 +14,7 @@
     "severity": "high",
     "source": "deterministic:change_policy",
     "file": "app/main.py",
-    "message": "Service code changed (app/main.py, app/support.py) but no test under `tests/` was added or updated.",
+    "message": "Service code changed (app/main.py, app/support.py) but no test under `tests/` was added or updated (this also covers the changed-line coverage gap).",
     "suggestion": "Add tests that fail if this behavior breaks, including edge cases (refactors too: prove nothing changed).",
     "line": null,
     "check": "A9"
