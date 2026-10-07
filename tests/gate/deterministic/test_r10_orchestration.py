@@ -24,6 +24,13 @@ def test_r10_orchestration(tmp_path):
 
     # Same rule and location from both pipelines: one finding, the deterministic one.
     assert dedupe([b, a]) == [a]
+    # Same problem, neighbouring line of the same statement (PR #14: full_name on 59, email on 60).
+    near = Finding("AGENTS#1", "critical", "ai:gemini", "app/main.py", "Email logged.", "Use redact().", 60, "B1")
+    assert dedupe([near, a]) == [a]
+    # A different problem further away, or under another rule, is kept.
+    far = Finding("AGENTS#1", "critical", "ai:gemini", "app/main.py", "Age returned.", "Drop it.", 70, "B2")
+    other = Finding("AGENTS#4", "critical", "ai:gemini", "app/main.py", "Not minimized.", "Use student_id.", 59, "B6")
+    assert dedupe([a, far, other]) == [a, far, other]
 
     # The AI job always runs after A, even when A failed.
     jobs = yaml.safe_load((GATE_ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8"))["jobs"]
