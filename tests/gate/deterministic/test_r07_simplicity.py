@@ -14,7 +14,7 @@ def test_r07_simplicity():
     assert {(f.line, f.severity, f.check) for f in findings} == {
         (1, "medium", "A11"),  # unused import
         (5, "medium", "A11"),  # unused variable
-        (6, "medium", "A12"),  # TODO without ticket
+        (6, "medium", "A12"),  # to-do marker without a ticket
         (10, "low", "A13"),  # not formatted
     }
 
