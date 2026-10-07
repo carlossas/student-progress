@@ -4,6 +4,10 @@ name: quality-gate
 # The required checks on develop/main are the commit statuses `quality-gate/<base>/critical` and
 # `quality-gate/<base>/high` set by the `report` job, one pair per base branch, because a commit
 # can head PRs into several branches (see gate/setup/branch_protection.sh).
+#
+# This file runs from the PR, the gate code from the base branch: pass new inputs through
+# environment variables GitHub already sets (e.g. GITHUB_BASE_REF), never new CLI flags, so an
+# older gate on the base branch keeps working (DECISIONS.md, ADR-2).
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -199,5 +203,5 @@ jobs:
           NEEDS_JSON: ${{ toJSON(needs) }}
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: >-
-          python -m gate report --in "$GITHUB_WORKSPACE/gate-out" --mode "$GATE_MODE" --needs "$NEEDS_JSON" --base-ref "$GITHUB_BASE_REF"
+          python -m gate report --in "$GITHUB_WORKSPACE/gate-out" --mode "$GATE_MODE" --needs "$NEEDS_JSON"
           --publish --pr ${{ github.event.pull_request.number }} --sha ${{ github.event.pull_request.head.sha }}

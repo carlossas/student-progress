@@ -16,6 +16,8 @@ Mini-ADRs for the quality gate. Context and rule numbers: [AGENTS.md](AGENTS.md)
 
 **Why.** A PR must not be able to relax the rules it is judged by, and untrusted code must not run next to the API key. PR text is passed to Gemini as untrusted data and the system prompt forbids following instructions in it.
 
+**Compatibility rule.** Because the workflow file comes from the PR and the gate code from the base branch, the workflow → gate interface must stay backward compatible: new inputs travel in environment variables (an older gate ignores them), never as new CLI flags. Learned on PR #21, whose new `--base-ref` flag crashed `develop`'s older gate; the base branch now comes from `GITHUB_BASE_REF`.
+
 **Limits.** On `pull_request` events GitHub runs the workflow file from the PR itself, so a PR could edit `quality-gate.yml`. Mitigations: the required checks are commit statuses that only the real gate posts, `workflow_policy` (R15) flags changes to the gate workflow, and the next step is a CODEOWNERS rule on `.github/` and `gate/`. The PR that introduces the gate necessarily runs its own copy (bootstrap, logged as a warning).
 
 ## ADR-3 · Blocking through two commit statuses, with a logged production override
