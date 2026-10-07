@@ -151,7 +151,7 @@ Pipeline cost for this run: $0.0455 = AI $0.0035 (1 request(s), 4049 in / 123 ou
 | Very large PR (167 files) | $0.13 per review | split into 5 requests, 164.8k input tokens, 28 s |
 | Re-run of an unchanged PR | $0 | served from cache |
 
-CI minutes per run haven't been measured on GitHub yet; the first runs will log them.
+First run on GitHub (PR #9, 2026-10-07): every job finished in under 30 s, so the run billed **4 runner-minutes ($0.024 at list price)**. The repository is public, so GitHub-hosted minutes are **free**; the CI column below is what the same usage would cost on a private repo.
 
 **Estimate for a normal day:** 5 developers × 2 medium PRs per day, all into `develop`.
 
@@ -159,17 +159,19 @@ CI minutes per run haven't been measured on GitHub yet; the first runs will log 
 |---|---|---|
 | Gate runs per PR | 3 | Opened, then 2 pushes with fixes; each push changes the diff, so no cache hit |
 | AI cost per run | ≈ $0.01 | A medium PR (≈ 10 files, ≈ 300 changed lines) is ≈ 10k input tokens, between the measured small and large PRs |
-| CI minutes per run | ≈ 7 | deterministic ≈ 2, smoke ≈ 3, ai ≈ 1, report ≈ 1 (rounded up per job); estimate until logged |
+| CI minutes per run | ≈ 5 | Measured 4 on PR #9 (each job < 1 min, rounded up per job); +1 for a medium PR's larger test suite |
 
 | | Per PR (3 runs) | Per day (10 PRs, 30 runs) | Per month (21 working days) | Per month from Jan 2027 (Gemini price ×2) |
 |---|---|---|---|---|
 | AI (Gemini) | $0.03 | $0.30 | ≈ $6.30 | ≈ $12.60 |
-| CI (GitHub Actions, list price) | $0.13 | $1.26 | ≈ $26.50 (4,410 runner-min) | ≈ $26.50 |
-| **Total** | **≈ $0.16** | **≈ $1.56** | **≈ $33** | **≈ $39** |
+| CI, public repo (this one) | $0 | $0 | $0 | $0 |
+| CI, if the repo were private (list price) | $0.09 | $0.90 | ≈ $18.90 (3,150 runner-min) | ≈ $18.90 |
+| **Total, this repo** | **≈ $0.03** | **≈ $0.30** | **≈ $6.30** | **≈ $12.60** |
+| Total if private | ≈ $0.12 | ≈ $1.20 | ≈ $25 | ≈ $32 |
 
 How to read it:
-- CI minutes cost about 4× the AI. On a private repo, the GitHub plan's included minutes (2,000/month on Free, 3,000 on Team) absorb about half of the month's CI. On a public repo, CI is free.
-- The biggest CI item is the README smoke job (≈ 3 of the 7 minutes). Running it only when `README.md` or `requirements*.txt` change would cut CI by ≈ 40%; it currently runs on every PR by design (AGENTS#15).
+- On this public repo the only real spend is Gemini: ≈ $6/month for the team today, ≈ $13/month after the January 2027 price change.
+- On a private repo, CI would be about 3× the AI cost, but the plan's included minutes (2,000/month on Free, 3,000 on Team) would cover the whole 3,150-minute month or most of it.
 - One AI review costs about as much as 2 CI minutes. Even at 2027 prices, the AI reviewer costs less per month than one hour of an engineer's time.
 
 ## 7. Troubleshooting
