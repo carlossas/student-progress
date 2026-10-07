@@ -1,0 +1,32 @@
+[
+  {
+    "rule": "AGENTS#20",
+    "severity": "high",
+    "source": "deterministic:change_policy",
+    "file": "app/main.py",
+    "message": "Service code changed but `docs/ARCHITECTURE.md`, `docs/API-AND-BUSINESS-RULES.md` were not updated.",
+    "suggestion": "Update the docs in the same PR: modules/diagrams/flows in ARCHITECTURE.md; endpoints, business rules and known gaps in API-AND-BUSINESS-RULES.md.",
+    "line": null,
+    "check": "A14"
+  },
+  {
+    "rule": "AGENTS#18",
+    "severity": "low",
+    "source": "deterministic:change_policy",
+    "file": "DECISIONS.md",
+    "message": "`DECISIONS.md` is missing.",
+    "suggestion": "Record it in `DECISIONS.md`: decisions and trade-offs in DECISIONS.md, AI tools/prompts/corrections in AI-USAGE.md.",
+    "line": null,
+    "check": "A16"
+  },
+  {
+    "rule": "AGENTS#18",
+    "severity": "low",
+    "source": "deterministic:change_policy",
+    "file": "AI-USAGE.md",
+    "message": "`AI-USAGE.md` is missing.",
+    "suggestion": "Record it in `AI-USAGE.md`: decisions and trade-offs in DECISIONS.md, AI tools/prompts/corrections in AI-USAGE.md.",
+    "line": null,
+    "check": "A16"
+  }
+]

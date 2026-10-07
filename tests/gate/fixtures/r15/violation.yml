@@ -1,0 +1,15 @@
+name: quality-gate
+on:
+  pull_request:
+    paths-ignore: ["docs/**"]
+jobs:
+  deterministic:
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-gate') }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m gate deterministic
+  ai:
+    needs: deterministic
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m gate ai

@@ -1,0 +1,35 @@
+[
+  {
+    "cell": null,
+    "code": "E722",
+    "end_location": {"column": 11, "row": 14},
+    "filename": "app/main.py",
+    "fix": null,
+    "location": {"column": 5, "row": 14},
+    "message": "Do not use bare `except`",
+    "noqa_row": 14,
+    "url": "https://docs.astral.sh/ruff/rules/bare-except"
+  },
+  {
+    "cell": null,
+    "code": "F401",
+    "end_location": {"column": 10, "row": 1},
+    "filename": "app/main.py",
+    "fix": {"applicability": "safe", "edits": [], "message": "Remove unused import: `os`"},
+    "location": {"column": 8, "row": 1},
+    "message": "`os` imported but unused",
+    "noqa_row": 1,
+    "url": "https://docs.astral.sh/ruff/rules/unused-import"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {"column": 130, "row": 20},
+    "filename": "app/main.py",
+    "fix": null,
+    "location": {"column": 121, "row": 20},
+    "message": "Line too long (130 > 120)",
+    "noqa_row": 20,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  }
+]

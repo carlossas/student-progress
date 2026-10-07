@@ -1,0 +1,12 @@
+[
+  {
+    "rule": "AGENTS#4",
+    "severity": "critical",
+    "source": "ai:gemini",
+    "file": "app/archive.py",
+    "message": "Cohort analytics copies birthdate and is_minor when student_id and non-personal attributes (such as country) are sufficient. Storing personal attributes of potential minors violates data minimization.",
+    "suggestion": "ARCHIVE.append({\n    \"student_id\": student.id,\n    \"country\": student.country,\n    \"lesson_id\": record.lesson_id,\n    \"score\": record.score,\n})",
+    "line": 16,
+    "check": "B6"
+  }
+]

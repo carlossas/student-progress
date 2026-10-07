@@ -1,0 +1,46 @@
+name: gate-eval
+
+# Measures the gate against the 8 golden PRs (AGENTS#12, #13) and runs the AI tests.
+# Costs Gemini credits, so it runs on demand and when the AI review itself changes.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "gate/ai/**"
+      - "gate/config/**"
+      - "eval/**"
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt -r requirements-gate.txt
+      - name: AI tests
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
+          GEMINI_THINKING_LEVEL: ${{ vars.GEMINI_THINKING_LEVEL || 'LOW' }}
+        run: pytest -m ai -q
+      - name: Evaluate on the golden PRs
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
+          GEMINI_THINKING_LEVEL: ${{ vars.GEMINI_THINKING_LEVEL || 'LOW' }}
+        run: python -m gate eval --ai --base origin/main --write --check-analysis
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gate-eval
+          path: |
+            EVAL.md
+            eval/results/

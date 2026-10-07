@@ -1,0 +1,1 @@
+{"title": "Typed and validated body for progress recording", "body": "Pydantic model with score bounded to 0-100; unknown lessons return 404."}

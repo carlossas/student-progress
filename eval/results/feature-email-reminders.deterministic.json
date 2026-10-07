@@ -1,0 +1,92 @@
+[
+  {
+    "rule": "AGENTS#8",
+    "severity": "critical",
+    "source": "deterministic:secrets",
+    "file": "app/notifications.py",
+    "message": "SendGrid API key committed in plain text (`SG.k\u2026`).",
+    "suggestion": "Treat it as leaked: rotate it now (it is in git history), remove it, and read it from the environment: `SENDGRID_API_KEY = os.environ[\"SENDGRID_API_KEY\"]` with the value stored as a GitHub/CI secret.",
+    "line": 7,
+    "check": "A1"
+  },
+  {
+    "rule": "AGENTS#1",
+    "severity": "critical",
+    "source": "deterministic:pii_flow",
+    "file": "app/notifications.py",
+    "message": "Personal data (`email`) reaches a log/print call in plain text.",
+    "suggestion": "Log only pseudonymous ids: `logger.info(\"...\", redact({...}))` or log `student.id`.",
+    "line": 13,
+    "check": "P2"
+  },
+  {
+    "rule": "AGENTS#6",
+    "severity": "high",
+    "source": "deterministic:change_policy",
+    "file": "app/notifications.py",
+    "message": "Service code changed (app/notifications.py) but no test under `tests/` was added or updated.",
+    "suggestion": "Add tests that fail if this behavior breaks, including edge cases (refactors too: prove nothing changed).",
+    "line": null,
+    "check": "A9"
+  },
+  {
+    "rule": "AGENTS#20",
+    "severity": "high",
+    "source": "deterministic:change_policy",
+    "file": "app/notifications.py",
+    "message": "Service code changed but `docs/ARCHITECTURE.md`, `docs/API-AND-BUSINESS-RULES.md` were not updated.",
+    "suggestion": "Update the docs in the same PR: modules/diagrams/flows in ARCHITECTURE.md; endpoints, business rules and known gaps in API-AND-BUSINESS-RULES.md.",
+    "line": null,
+    "check": "A14"
+  },
+  {
+    "rule": "AGENTS#6",
+    "severity": "high",
+    "source": "deterministic:coverage",
+    "file": "app/notifications.py",
+    "message": "Changed-line coverage is 0% (minimum 85%). Uncovered lines: 2, 4, 7, 8, 11, 13.",
+    "suggestion": "Add tests that execute these lines and assert on the behavior (>= 85% of changed lines).",
+    "line": 2,
+    "check": "A10"
+  },
+  {
+    "rule": "AGENTS#7",
+    "severity": "medium",
+    "source": "deterministic:todo",
+    "file": "app/notifications.py",
+    "message": "`TODO` without a ticket reference: `# TODO: mover a config antes del launch`",
+    "suggestion": "Create a ticket and reference it, e.g. `# TODO(OE-123): ...`, or do it now.",
+    "line": 6,
+    "check": "A12"
+  },
+  {
+    "rule": "AGENTS#7",
+    "severity": "low",
+    "source": "deterministic:ruff-format",
+    "file": "app/notifications.py",
+    "message": "Code is not formatted with ruff.",
+    "suggestion": "Run `ruff format` on this file.",
+    "line": 2,
+    "check": "A13"
+  },
+  {
+    "rule": "AGENTS#18",
+    "severity": "low",
+    "source": "deterministic:change_policy",
+    "file": "DECISIONS.md",
+    "message": "`DECISIONS.md` is missing.",
+    "suggestion": "Record it in `DECISIONS.md`: decisions and trade-offs in DECISIONS.md, AI tools/prompts/corrections in AI-USAGE.md.",
+    "line": null,
+    "check": "A16"
+  },
+  {
+    "rule": "AGENTS#18",
+    "severity": "low",
+    "source": "deterministic:change_policy",
+    "file": "AI-USAGE.md",
+    "message": "`AI-USAGE.md` is missing.",
+    "suggestion": "Record it in `AI-USAGE.md`: decisions and trade-offs in DECISIONS.md, AI tools/prompts/corrections in AI-USAGE.md.",
+    "line": null,
+    "check": "A16"
+  }
+]

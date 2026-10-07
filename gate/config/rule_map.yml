@@ -1,0 +1,27 @@
+# Tool rule id -> golden rule, severity, plan check id, default suggestion.
+# One table for every external tool (AGENTS#11). A tool rule id that matches nothing here
+# raises UnmappedRuleError: findings are never dropped silently (AGENTS#5).
+# Keys ending in "*" match by prefix; the longest match wins.
+
+ruff:
+  E722:   {rule: AGENTS#5, severity: high,   check: A6,  suggestion: "Catch the specific exception you expect and handle it explicitly (re-raise, or return a 4xx)."}
+  BLE001: {rule: AGENTS#5, severity: high,   check: A6,  suggestion: "Catch the specific exception you expect; a broad `except Exception` hides real failures."}
+  S110:   {rule: AGENTS#5, severity: high,   check: A6,  suggestion: "Never `pass` in an except block: log with redact() and re-raise, or translate to an HTTPException."}
+  F401:   {rule: AGENTS#7, severity: medium, check: A11, suggestion: "Remove the unused import."}
+  F841:   {rule: AGENTS#7, severity: medium, check: A11, suggestion: "Remove the unused variable or use it."}
+  "F*":   {rule: AGENTS#7, severity: medium, check: A11, suggestion: "Fix the reported pyflakes error."}
+  "B*":   {rule: AGENTS#7, severity: medium, check: A11, suggestion: "Fix the likely bug reported by flake8-bugbear."}
+  "E*":   {rule: AGENTS#7, severity: low,    check: A13, suggestion: "Apply ruff's suggested style fix (`ruff check --fix`)."}
+  "W*":   {rule: AGENTS#7, severity: low,    check: A13, suggestion: "Apply ruff's suggested style fix (`ruff check --fix`)."}
+
+ruff-format:
+  format: {rule: AGENTS#7, severity: low, check: A13, suggestion: "Run `ruff format` on this file."}
+
+vulture:
+  unreachable: {rule: AGENTS#7, severity: medium, check: A11, suggestion: "Delete the unreachable code."}
+
+pytest:
+  failure: {rule: AGENTS#6, severity: high, check: A8, suggestion: "Fix the code or the test so the suite passes; never skip or delete a failing test to get green."}
+
+coverage:
+  changed-lines: {rule: AGENTS#6, severity: high, check: A10, suggestion: "Add tests that execute these lines and assert on the behavior (>= 85% of changed lines)."}

@@ -1,6 +1,6 @@
 """Helpers de privacidad. Ver TEAM-STANDARDS.md §3 y §4."""
 
-PII_FIELDS = {"full_name", "email", "birthdate"}
+PII_FIELDS = {"full_name", "email", "birthdate", "is_minor"}
 
 # Retención en días por categoría de dato. Todo dataset nuevo DEBE declarar
 # su categoría acá. Datos de menores: bucket más estricto.

@@ -1,0 +1,1 @@
+{"title": "Streak endpoint", "body": "Adds GET /students/{id}/streak and documents it (endpoint table + BR-2)."}
