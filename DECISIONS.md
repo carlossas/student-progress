@@ -24,7 +24,7 @@ Mini-ADRs for the quality gate. Context and rule numbers: [AGENTS.md](AGENTS.md)
 
 **Why.** Statuses can be overridden without re-running jobs and without admin bypass of branch protection, and the override is visible on the PR. A crashed check or a failed Gemini call is a blocking *gate error*, never a silent pass.
 
-**Rollout.** `GATE_MODE=shadow` (comment only) is the default until the golden-set evaluation validates the gate (AGENTS#14); then the repo variable is switched to `enforce`.
+**Rollout.** `GATE_MODE=shadow` (comment only) is the default until the golden-set evaluation validates the gate (AGENTS#14); then the repo variable is switched to `enforce`. Branch protection on `develop` and `main` (applied 2026-10-07, after making the repo public: GitHub's free plan has no protection for private repos) also requires 1 approving review; admins can bypass, which GitHub records.
 
 ## ADR-4 · One Gemini call per PR, stable settings, strict output
 
@@ -49,7 +49,7 @@ Mini-ADRs for the quality gate. Context and rule numbers: [AGENTS.md](AGENTS.md)
 ## ADR-6 · Left out, in priority order
 
 1. **CODEOWNERS for `.github/` and `gate/`**: closes the workflow-edit gap in ADR-2. Five minutes, needs the team's GitHub handles.
-2. **Fork PRs**: `GITHUB_TOKEN` is read-only there, so publishing fails. Needs a `pull_request_target` reporter that never checks out PR code.
+2. **Fork PRs** (now relevant: the repo is public since 2026-10-07): fork PRs get no secrets and a read-only `GITHUB_TOKEN`, so the AI job fails closed (gate error) and the report can't comment. Needs a `pull_request_target` reporter that never checks out PR code, and a decision on whether fork PRs get the AI review.
 3. **Prompt-injection tests** in the golden set (PR text that tries to suppress findings).
 4. **Escalate deterministic retention findings to Critical** when the copied payload contains personal fields (today High; see the severity disagreement in EVAL.md).
 5. **SARIF upload** so findings also appear in GitHub code scanning.

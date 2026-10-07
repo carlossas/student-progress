@@ -83,7 +83,7 @@ $env:GEMINI_API_KEY = "..."        # Windows PowerShell
 
 Optional: `GEMINI_MODEL` (default `gemini-3.8-flash`), `GEMINI_THINKING_LEVEL` (`LOW`), `GEMINI_MAX_OUTPUT_TOKENS` (`2048`), `GEMINI_MAX_INPUT_TOKENS` (`30000`, input budget per request; larger PRs are split into several requests).
 
-A typical review costs about a third of a cent ($0.0027–$0.0041 measured); a very large PR is split into several requests (this repo's 167-file gate branch: 5 requests, $0.13). Results are cached in `.gate-cache/ai/`, so re-running `check-all` on unchanged code costs nothing.
+A typical review costs about a third of a cent ($0.0027–$0.0041 measured); a very large PR is split into several requests (this repo's gate PR #9, 167 files: 7 requests, $0.14). Results are cached in `.gate-cache/ai/`, so re-running `check-all` on unchanged code costs nothing.
 
 ## 4. Individual commands
 
@@ -121,7 +121,11 @@ A typical review costs about a third of a cent ($0.0027–$0.0041 measured); a v
    - **Checks** `quality-gate/critical` and `quality-gate/high`: red means blocked.
    - **A summary comment** on the PR, updated on each push, with every finding and the cost of that run (AI + CI).
    - **Inline comments** with the suggested fix on the lines concerned.
+   - In `shadow` mode (the default) the checks stay green and read `[shadow] 2 critical finding(s)`, and the review is a comment. Set `GATE_MODE=enforce` to turn them red and block.
 4. Fix and push again; the gate re-runs. Watch it with `gh pr checks --watch`.
+5. Merge: `develop` and `main` need both checks green **and 1 approving review**. GitHub doesn't let you approve your own PR; an admin can merge with "bypass branch protections" (recorded by GitHub).
+
+Example of a real run: [PR #10](https://github.com/carlossas/student-progress/pull/10) (golden PR #4 against `develop`) got 2 Critical (personal data logged through a helper, found by the scripts; support context not minimized, found by Gemini) and 2 High (no tests, docs not updated), each Critical as an inline comment with the fix. Run cost: $0.028.
 
 **Useful commands:**
 
@@ -148,10 +152,11 @@ Pipeline cost for this run: $0.0455 = AI $0.0035 (1 request(s), 4049 in / 123 ou
 | What | AI cost | Detail |
 |---|---|---|
 | Small PR (the 8 golden PRs) | $0.0027–$0.0041 per review | 3.5k–4.3k input tokens, 5–331 output, ≈ 6 s |
-| Very large PR (167 files) | $0.13 per review | split into 5 requests, 164.8k input tokens, 28 s |
+| Real PR in CI (#10, support-context) | $0.0041 per review | 4,789 input / 124 output tokens; whole run $0.028 incl. 4 CI min at list price |
+| Very large PR in CI (#9, 167 files) | $0.1376 per review | split into 7 requests, 183k input tokens, 39 s; whole run $0.16 |
 | Re-run of an unchanged PR | $0 | served from cache |
 
-First run on GitHub (PR #9, 2026-10-07): every job finished in under 30 s, so the run billed **4 runner-minutes ($0.024 at list price)**. The repository is public, so GitHub-hosted minutes are **free**; the CI column below is what the same usage would cost on a private repo.
+Measured on GitHub (PRs #9 and #10, 2026-10-07): every job finishes in 11–39 s, so a run bills **4 runner-minutes ($0.024 at list price)**. The repository is public, so GitHub-hosted minutes are **free**; the CI column below is what the same usage would cost on a private repo.
 
 **Estimate for a normal day:** 5 developers × 2 medium PRs per day, all into `develop`.
 

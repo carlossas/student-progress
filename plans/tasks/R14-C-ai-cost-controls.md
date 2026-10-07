@@ -22,7 +22,7 @@
 
 - **C6** `tests/gate/deterministic/test_pipeline_cost.py`: 4 jobs of 95/140/30/12 s bill 7 minutes ($0.042 at $0.006); AI + CI total and rendered line; cached AI = $0; no AI job = AI $0.
 
-Measured (2026-10-07): this repo's 167-file branch → 5 requests, 164.8k input tokens, $0.13, 28 s.
+Measured (2026-10-07): locally, this repo's 167-file branch → 5 requests, 164.8k input tokens, $0.13, 28 s; in CI on PR #9 (with the recalibrated estimate) → 7 requests, 183k input tokens, $0.1376, 39 s.
 
 ## Follow-up after the first real runs
 Read `cost.cached_tokens` and output tokens in the run summaries; lower or raise `GEMINI_MAX_OUTPUT_TOKENS` accordingly (no code change).
