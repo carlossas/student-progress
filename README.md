@@ -40,7 +40,9 @@ Two pipelines review every PR against [AGENTS.md](AGENTS.md):
 | High | Request-changes review (`quality-gate/high`), merge blocked |
 | Medium / Low | Comment only, merge allowed |
 
-How it was designed and measured: [plans/quality-gate-classification.md](plans/quality-gate-classification.md), [EVAL.md](EVAL.md), [DECISIONS.md](DECISIONS.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#quality-gate).
+Pipeline details, AI cost and model outlook: [docs/PIPELINES.md](docs/PIPELINES.md). How it was designed and measured: [plans/quality-gate-classification.md](plans/quality-gate-classification.md), [EVAL.md](EVAL.md), [DECISIONS.md](DECISIONS.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#quality-gate).
+
+**Developer guide (local + GitHub, one command to check everything): [PIPELINE_README.md](PIPELINE_README.md).**
 
 ### Run it locally (2 minutes)
 
@@ -69,7 +71,7 @@ The hooks use `.venv` when present (override with `GATE_PYTHON`). Self-review wi
 ### CI setup (once per repository)
 
 1. **Secret** `GEMINI_API_KEY` (Settings → Secrets and variables → Actions). Never commit it (AGENTS#8).
-2. **Variables** (optional): `GEMINI_MODEL` (default `gemini-3.8-flash`), `GEMINI_THINKING_LEVEL` (default `LOW`), `GATE_MODE` (`shadow` by default; set to `enforce` once [EVAL.md](EVAL.md) validates the gate, AGENTS#14).
+2. **Variables** (optional): `GEMINI_MODEL` (default `gemini-3.8-flash`), `GEMINI_THINKING_LEVEL` (default `LOW`), `GEMINI_MAX_OUTPUT_TOKENS` (default `2048`), `GATE_MODE` (`shadow` by default; set to `enforce` once [EVAL.md](EVAL.md) validates the gate, AGENTS#14).
 3. **Branch protection** on `develop` and `main`, requiring `quality-gate/critical` and `quality-gate/high`:
    ```bash
    bash gate/setup/branch_protection.sh

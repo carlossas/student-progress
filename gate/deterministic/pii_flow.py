@@ -23,7 +23,7 @@ import ast
 from dataclasses import dataclass
 
 from gate.config import is_service_python, pii_fields
-from gate.diff import DiffContext
+from gate.diff import DiffContext, git
 from gate.report.finding import Finding, Signal
 
 LOG_METHODS = {"debug", "info", "warning", "warn", "error", "exception", "critical", "fatal", "log"}
@@ -331,7 +331,10 @@ def _parse_service_modules(ctx: DiffContext) -> dict[str, ast.Module]:
     """Every service module of the analyzed tree (summaries need unchanged helpers too)."""
     modules = {}
     paths = set(ctx.files())
-    if ctx.mode != "staged":
+    if ctx.mode in ("refs", "worktree"):
+        # Tracked files only: never virtualenvs, node_modules or build output.
+        paths |= set(git(ctx.repo, "ls-files", "--", "*.py").splitlines())
+    elif ctx.mode == "fixture":
         paths |= {p.relative_to(ctx.repo).as_posix() for p in ctx.repo.rglob("*.py")}
     for path in sorted(paths):
         if not is_service_python(path):

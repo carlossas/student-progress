@@ -1,5 +1,7 @@
 """Quality gate CLI.
 
+    python -m gate all [--fix] [--no-ai]          # everything a developer needs, one final verdict
+    python -m gate lint [--fix]                   # ruff (repo config + gate format policy)
 python -m gate check --base main [--ai]       # everything, locally, against a base branch
 python -m gate precommit                      # husky pre-commit: fast checks on staged files
 python -m gate prepush [--base origin/develop]  # husky pre-push: tests + changed-line coverage
@@ -17,7 +19,7 @@ import sys
 from pathlib import Path
 
 from gate.config import SEVERITIES
-from gate.diff import DiffContext, git
+from gate.diff import DiffContext, default_base
 from gate.report.actions import decide, render_summary
 from gate.report.finding import Finding, read_findings, read_signals, sort_findings, write_json
 from gate.report.merge import dedupe
@@ -75,8 +77,13 @@ def cmd_smoke(args) -> int:
     return 0
 
 
+def _ai_cache_dir(args) -> Path | None:
+    value = getattr(args, "cache_dir", None) or os.environ.get("GATE_AI_CACHE_DIR", "")
+    return Path(value) if value else None
+
+
 def cmd_ai(args) -> int:
-    from gate.ai.review import review
+    from gate.ai.review import review, review_key
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -87,8 +94,12 @@ def cmd_ai(args) -> int:
         else []
     )
     ctx = DiffContext.from_refs(Path(args.repo), args.base, args.head, **_pr_meta())
+    signals = read_signals(source / "signals.json")
+    if args.key_only:
+        print(review_key(ctx, deterministic, signals))
+        return 0
     try:
-        result = review(ctx, deterministic, read_signals(source / "signals.json"))
+        result = review(ctx, deterministic, signals, cache_dir=_ai_cache_dir(args))
     except Exception as e:  # noqa: BLE001 - becomes a blocking gate error in the report
         _write_errors(out, "ai", [f"AI review failed: {e}"])
         print(f"::error::AI review failed: {e}")
@@ -97,15 +108,27 @@ def cmd_ai(args) -> int:
     meta = {
         "model": result.model,
         "cost": result.cost,
+        "cached": result.cached,
+        "cache_key": result.cache_key,
+        "requests": result.requests,
         "dropped": [{"item": i, "reason": r} for i, r in result.dropped],
     }
     (out / "ai-meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     _write_errors(out, "ai", [])
     print_findings(result.findings)
-    print(
-        f"model {result.model} · ${result.cost['total_usd']:.4f} · {len(result.dropped)} invalid AI finding(s) dropped"
-    )
+    print(_cost_line(result.model, result.cost, result.cached, len(result.dropped)))
     return 0
+
+
+def _cost_line(model: str, cost: dict, cached: bool, dropped: int) -> str:
+    if cached:
+        return f"AI review: `{model}` · served from cache (unchanged PR) · $0 (first run cost ${cost.get('original_total_usd', 0):.4f}) · {dropped} invalid AI finding(s) dropped"
+    approx = "" if cost.get("rate_known") else " (approximate rate)"
+    return (
+        f"AI review: `{model}` · {cost['prompt_tokens']} in ({cost['cached_tokens']} from prompt cache) / "
+        f"{cost['output_tokens']} out / {cost['thinking_tokens']} thinking tokens · ${cost['total_usd']:.4f}{approx} · "
+        f"{dropped} invalid AI finding(s) dropped"
+    )
 
 
 def _collect(source: Path, needs: dict) -> tuple[list[Finding], list[str], list[str]]:
@@ -124,22 +147,43 @@ def _collect(source: Path, needs: dict) -> tuple[list[Finding], list[str], list[
     meta = source / "ai-meta.json"
     if meta.exists():
         data = json.loads(meta.read_text(encoding="utf-8"))
-        cost = data["cost"]
-        approx = "" if cost.get("rate_known") else " (approximate rate)"
-        extra.append(
-            f"<sub>AI review: `{data['model']}` · {cost['prompt_tokens']} in / {cost['output_tokens']} out / "
-            f"{cost['thinking_tokens']} thinking tokens · ${cost['total_usd']:.4f}{approx} · "
-            f"{len(data['dropped'])} invalid AI finding(s) dropped</sub>"
-        )
+        line = _cost_line(data["model"], data["cost"], data.get("cached", False), len(data["dropped"]))
+        extra.append(f"<sub>{line}</sub>")
     elif (needs.get("ai") or {}).get("result") == "skipped":
         extra.append("<sub>AI review skipped: it runs only for PRs into `develop` and `main`.</sub>")
     return dedupe(findings), errors, extra
 
 
+def _run_cost(source: Path, publish: bool) -> dict:
+    """Cost of this gate run (AI + CI minutes), logged and saved as cost.json."""
+    from gate.report import cost as costs
+
+    meta_file = source / "ai-meta.json"
+    ai_meta = json.loads(meta_file.read_text(encoding="utf-8")) if meta_file.exists() else None
+    jobs: list[costs.JobTime] = []
+    run_id = os.environ.get("GITHUB_RUN_ID")
+    if publish and run_id:
+        from gate.report.github import GitHub, GitHubError
+
+        try:
+            jobs = costs.jobs_from_github(GitHub(), run_id)
+        except GitHubError as e:  # cost is informational: log it, never block on it
+            log.warning("could not read job timings for the cost line: %s", e)
+    result = costs.pipeline_cost(ai_meta, jobs, costs.actions_usd_per_minute())
+    (source / "cost.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+    line = costs.render(result)
+    print(line)
+    print(f"::notice title=Quality gate cost::{line}")
+    return result
+
+
 def cmd_report(args) -> int:
+    from gate.report.cost import render
+
     source = Path(args.inputs)
     needs = json.loads(args.needs) if args.needs else {}
     findings, errors, extra = _collect(source, needs)
+    extra.append(f"<sub>{render(_run_cost(source, args.publish))}</sub>")
     decision = decide(findings, mode=args.mode, gate_errors=errors)
     run_url = os.environ.get("GITHUB_RUN_URL")
     summary = render_summary(
@@ -197,15 +241,7 @@ def cmd_prepush(args) -> int:
     from gate.deterministic import tests_runner
 
     repo = Path(args.repo)
-    base = args.base
-    if not base:
-        for candidate in ("origin/develop", "origin/main", "main"):
-            try:
-                git(repo, "rev-parse", "--verify", "--quiet", candidate)
-                base = candidate
-                break
-            except RuntimeError:
-                continue
+    base = args.base or default_base(repo)
     findings = tests_runner.run(DiffContext.from_refs(repo, base))
     if findings:
         print_findings(findings)
@@ -221,11 +257,23 @@ def cmd_check(args) -> int:
     if args.ai:
         from gate.ai.review import review
 
-        ai = review(ctx, findings, result.signals)
+        ai = review(ctx, findings, result.signals, cache_dir=Path(args.repo) / ".gate-cache" / "ai")
         findings = dedupe(findings + ai.findings)
-        print(f"AI review: {ai.model} · ${ai.cost['total_usd']:.4f} · {len(ai.dropped)} dropped")
+        print(_cost_line(ai.model, ai.cost, ai.cached, len(ai.dropped)))
     print_findings(findings)
     return _local_exit(findings, errors)
+
+
+def cmd_all(args) -> int:
+    from gate.local import main_all
+
+    return main_all(args)
+
+
+def cmd_lint(args) -> int:
+    from gate.local import main_lint
+
+    return main_lint(args)
 
 
 def cmd_eval(args) -> int:
@@ -244,6 +292,19 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--repo", default=".", help="checkout to analyze (default: .)")
         p.add_argument("--base", required=base_required, help="base ref (e.g. main or a SHA)")
         p.add_argument("--head", default="HEAD")
+
+    p = sub.add_parser("all", help="pre-commit + lint + tests + both pipelines, one final verdict")
+    p.add_argument("--repo", default=".")
+    p.add_argument("--base", default="", help="branch your PR targets (default: origin/develop, origin/main, main)")
+    p.add_argument("--fix", action="store_true", help="let ruff fix lint and formatting first")
+    p.add_argument("--no-ai", action="store_true", help="skip the Gemini review even if a key is set")
+    p.set_defaults(fn=cmd_all)
+
+    p = sub.add_parser("lint", help="ruff check (repo config) + format check on changed files")
+    p.add_argument("--repo", default=".")
+    p.add_argument("--base", default="")
+    p.add_argument("--fix", action="store_true")
+    p.set_defaults(fn=cmd_lint)
 
     p = sub.add_parser("check", help="run the gate locally against a base branch")
     repo_args(p)
@@ -266,6 +327,8 @@ def build_parser() -> argparse.ArgumentParser:
     repo_args(p)
     p.add_argument("--in", dest="inputs", default="gate-out")
     p.add_argument("--out", default="gate-out")
+    p.add_argument("--cache-dir", default="", help="AI result cache (default: $GATE_AI_CACHE_DIR; none if unset)")
+    p.add_argument("--key-only", action="store_true", help="print the cache key and exit (no API call)")
     p.set_defaults(fn=cmd_ai)
 
     p = sub.add_parser("report", help="CI: merge findings, apply the severity policy, publish")

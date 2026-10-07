@@ -2,8 +2,9 @@
 
 TOKEN COUNTS ARE REAL: every figure comes from `usage_metadata` in the Gemini response.
 PRICES ARE A TABLE: Google publishes no pricing API, so the rates below are transcribed by
-hand from ai.google.dev/gemini-api/docs/pricing (verified 2026-09-04) and go stale when
-Google changes them. Thinking tokens bill at the OUTPUT rate.
+hand from ai.google.dev/gemini-api/docs/pricing (verified 2026-10-07) and go stale when
+Google changes them. Thinking tokens bill at the OUTPUT rate. Input tokens served from
+Gemini's implicit cache (the stable system prompt) bill at 10% of the input rate.
 """
 
 from __future__ import annotations
@@ -21,6 +22,8 @@ RATES: dict[str, tuple[float, float, str | None, tuple[float, float] | None]] = 
     "gemini-2.5-flash": (0.30, 2.50, None, None),
 }
 FALLBACK_RATE = (0.75, 3.75)
+# Context-caching price as a fraction of the input rate (0.075 vs 0.75 on 3.x Flash).
+CACHED_INPUT_FACTOR = 0.10
 
 
 def rate_for(model: str, on: date | None = None) -> tuple[float, float, bool]:
@@ -57,7 +60,8 @@ class Usage:
 
     def cost(self, on: date | None = None) -> dict:
         inp, out, known = rate_for(self.model, on)
-        input_usd = self.prompt_tokens / 1e6 * inp
+        uncached = max(self.prompt_tokens - self.cached_tokens, 0)
+        input_usd = (uncached + self.cached_tokens * CACHED_INPUT_FACTOR) / 1e6 * inp
         output_usd = self.output_tokens / 1e6 * out
         thinking_usd = self.thinking_tokens / 1e6 * out
         return {
@@ -66,5 +70,6 @@ class Usage:
             "output_usd": round(output_usd, 6),
             "thinking_usd": round(thinking_usd, 6),
             "total_usd": round(input_usd + output_usd + thinking_usd, 6),
+            "cache_savings_usd": round(self.cached_tokens * (1 - CACHED_INPUT_FACTOR) / 1e6 * inp, 6),
             "rate_known": known,
         }

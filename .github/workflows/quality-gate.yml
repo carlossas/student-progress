@@ -94,6 +94,16 @@ jobs:
     if: ${{ always() && (github.base_ref == 'main' || github.base_ref == 'develop') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Everything that shapes the answer is part of the cache key, so it is set job-wide.
+    env:
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
+      GEMINI_THINKING_LEVEL: ${{ vars.GEMINI_THINKING_LEVEL || 'LOW' }}
+      GEMINI_FALLBACK_MODELS: ${{ vars.GEMINI_FALLBACK_MODELS }}
+      GEMINI_MAX_OUTPUT_TOKENS: ${{ vars.GEMINI_MAX_OUTPUT_TOKENS || '2048' }}
+      GEMINI_MAX_INPUT_TOKENS: ${{ vars.GEMINI_MAX_INPUT_TOKENS || '30000' }}
+      GATE_AI_CACHE_DIR: ${{ github.workspace }}/gate-cache
+      PR_TITLE: ${{ github.event.pull_request.title }}
+      PR_BODY: ${{ github.event.pull_request.body }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -118,16 +128,28 @@ jobs:
         with:
           name: gate-deterministic
           path: gate-in
+      # Cost: an unchanged review (same diff, PR text, prompts and settings) is served from cache.
+      - name: AI cache key
+        id: key
+        working-directory: ${{ env.GATE_HOME }}
+        run: echo "key=$(python -m gate ai --key-only --repo "$GITHUB_WORKSPACE/pr" --base "$BASE_SHA" --in "$GITHUB_WORKSPACE/gate-in")" >> "$GITHUB_OUTPUT"
+      - name: Restore AI cache
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: gate-cache
+          key: gate-ai-${{ steps.key.outputs.key }}
       - name: Pipeline B (Gemini)
         working-directory: ${{ env.GATE_HOME }}
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
-          GEMINI_THINKING_LEVEL: ${{ vars.GEMINI_THINKING_LEVEL || 'LOW' }}
-          GEMINI_FALLBACK_MODELS: ${{ vars.GEMINI_FALLBACK_MODELS }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
         run: python -m gate ai --repo "$GITHUB_WORKSPACE/pr" --base "$BASE_SHA" --in "$GITHUB_WORKSPACE/gate-in" --out "$GITHUB_WORKSPACE/gate-out"
+      - name: Save AI cache
+        if: ${{ steps.cache.outputs.cache-hit != 'true' && hashFiles('gate-cache/*.json') != '' }}
+        uses: actions/cache/save@v4
+        with:
+          path: gate-cache
+          key: gate-ai-${{ steps.key.outputs.key }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -145,6 +167,7 @@ jobs:
       contents: read
       pull-requests: write
       statuses: write
+      actions: read  # job timings for the per-run cost line
     steps:
       - uses: actions/checkout@v4
         with:
@@ -166,9 +189,10 @@ jobs:
           pattern: gate-*
           merge-multiple: true
           path: gate-out
-      - name: Report
+      - name: Report (findings, statuses, comments, per-run cost)
         working-directory: ${{ env.GATE_HOME }}
         env:
+          GATE_ACTIONS_USD_PER_MINUTE: ${{ vars.GATE_ACTIONS_USD_PER_MINUTE || '0.006' }}
           GITHUB_TOKEN: ${{ github.token }}
           GATE_MODE: ${{ vars.GATE_MODE || 'shadow' }}
           NEEDS_JSON: ${{ toJSON(needs) }}

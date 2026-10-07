@@ -12,7 +12,7 @@ The 8 open PRs are the golden set. The gate is treated as a system to measure (A
 | PR | Verdict | Expected problems |
 |----|---------|-------------------|
 | `feature/lessons-pagination` | sound | — |
-| `feature/score-validation` | sound | — (non-numeric score → 500 is a pre-existing gap: acceptable) |
+| `feature/score-validation` | block | High #5: the new validation still returns a 500 for a non-numeric score (changed after the first AI run, see below) |
 | `fix/mobile-sync-visibility` | block | Critical #1: `full_name` + `email` logged in plain text |
 | `feature/support-context` | block | Critical #1: name/email/birthdate logged through a helper · Critical #4: support context not minimized · High #6: no tests |
 | `feature/email-reminders` | block | Critical #8: SendGrid key committed · Critical #1: recipient email logged · Medium #7: TODO without ticket · High #6: no tests |
@@ -25,31 +25,31 @@ The 8 open PRs are the golden set. The gate is treated as a system to measure (A
 <!-- eval:results:start -->
 | Pipeline | Precision | Recall | TP | FP | FN | Severity agreement |
 |---|---|---|---|---|---|---|
-| deterministic | 1.00 | 0.64 | 11 | 0 | 5 | 0.82 |
+| deterministic | 1.00 | 0.60 | 11 | 0 | 6 | 0.82 |
+| ai | 1.00 | 0.47 | 7 | 0 | 8 | 1.00 |
+| combined | 1.00 | 1.00 | 18 | 0 | 0 | 0.89 |
 
-Per severity (deterministic):
+Per severity (combined):
 
 | Severity | Findings | Precision | Expected | Recall |
 |---|---|---|---|---|
-| critical | 4 | 1.00 | 7 | 0.71 |
-| high | 6 | 1.00 | 6 | 0.50 |
+| critical | 7 | 1.00 | 7 | 1.00 |
+| high | 10 | 1.00 | 7 | 1.00 |
 | medium | 1 | 1.00 | 1 | 1.00 |
 | low | 0 | — | 0 | — |
 
-Per PR (deterministic):
+Per PR (combined):
 
 | PR | Verdict (truth) | Gate result | TP | FP | FN |
 |---|---|---|---|---|---|
 | `feature/lessons-pagination` | sound | pass | 0 | 0 | 0 |
-| `feature/score-validation` | sound | pass | 0 | 0 | 0 |
-| `fix/mobile-sync-visibility` | block | block | 1 | 0 | 0 |
-| `feature/support-context` | block | block | 2 | 0 | 1 |
+| `feature/score-validation` | block | block | 1 | 0 | 0 |
+| `fix/mobile-sync-visibility` | block | block | 2 | 0 | 0 |
+| `feature/support-context` | block | block | 3 | 0 | 0 |
 | `feature/email-reminders` | block | block | 5 | 0 | 0 |
-| `feature/streaks` | block | pass | 0 | 0 | 2 |
-| `feature/analytics-archive` | block | block | 3 | 0 | 1 |
-| `fix/progress-percentage` | block | pass | 0 | 0 | 1 |
-
-_AI pipeline not run (no GEMINI_API_KEY or `--ai` not passed)._
+| `feature/streaks` | block | block | 2 | 0 | 0 |
+| `feature/analytics-archive` | block | block | 4 | 0 | 0 |
+| `fix/progress-percentage` | block | block | 1 | 0 | 0 |
 <!-- eval:results:end -->
 
 ## Failure analysis
@@ -57,18 +57,26 @@ _AI pipeline not run (no GEMINI_API_KEY or `--ai` not passed)._
 Generated list (every false positive and false negative of the last run):
 
 <!-- eval:failures:start -->
-| Id | Kind | PR | Rule | Severity | Source | Location | Finding / expected |
-|---|---|---|---|---|---|---|---|
-| `fn-pr4-not-minimized` | FN | `feature/support-context` | AGENTS#4 | critical | - | `app/support.py:4` | support context carries name/email/birthdate where student_id would do |
-| `fn-pr6-streak-bug` | FN | `feature/streaks` | AGENTS#9 | high | - | `app/streaks.py:5` | starts counting yesterday: today's activity never counts (docstring says ending today) |
-| `fn-pr6-weak-tests` | FN | `feature/streaks` | AGENTS#6 | high | - | `tests/test_streaks.py:1` | isinstance / >= 0 assertions can't detect a regression |
-| `fn-pr7-not-minimized` | FN | `feature/analytics-archive` | AGENTS#4 | critical | - | `app/archive.py:11` | copies full_name, birthdate, is_minor for analytics |
-| `fn-pr8-wrong-percentage` | FN | `fix/progress-percentage` | AGENTS#9 | high | - | `app/main.py:38` | int() truncates (2/3 -> 66) and an empty catalog reports 100% complete |
+No false positives or false negatives.
 <!-- eval:failures:end -->
 
 Each entry below explains one item of the list. `python -m gate eval --check-analysis` fails while any item lacks its **Why** and **Change**.
 
-> Status: the entries below analyze the **deterministic-only** run. The AI run (`python -m gate eval --ai --write`) is pending the Gemini key; it will regenerate the list, and every new FP/FN (including the first AI false positive) gets its entry here.
+> Status (2026-10-07): the combined run has **no** FP or FN (18/18). The entries below analyze the misses of the **deterministic-only** run; the AI pipeline found all six (`gemini-3.8-flash`, LOW thinking). Run them yourself: `python -m gate eval` vs `python -m gate eval --ai`.
+>
+> Why the AI's own recall is 0.47: by design it is told not to repeat what the scripts already reported, so on its own it only finds the remaining problems. Its value is the combined recall (0.60 → 1.00) at precision 1.00.
+
+### Ground-truth change after the first AI run (decided 2026-10-07)
+**Why:** on `feature/score-validation` the AI reported High `AGENTS#5` at `app/main.py:52`: the PR adds `score = int(payload.get("score", 0))`, which still returns a 500 for a non-numeric score. The first ground truth called the PR sound and listed this as *acceptable*. The finding is correct: the line is new, and AGENTS#5 requires a 4xx for bad input.
+**Change:** the ground truth now expects it (`pr2-score-500`) and the PR's verdict is "block". This is the eval working as intended: the model surfaced a problem the human ground truth had under-rated, and the decision was made by a person, not by tuning the model to agree.
+
+### Run-to-run stability (R14-B, fixed)
+**Why:** with `temperature=0` alone, 3 identical reviews returned the same Critical findings but a High finding (unknown student id → 500) appeared in only some runs: a re-run could flip a PR between blocked and passing. Google's 3.8 Flash notes say temperature is no longer the knob it was.
+**Change:** a fixed sampling `seed` in `gate/ai/config.py`. Three runs are now byte-identical (same findings, lines and output tokens); R14-B passes.
+
+### fn-pr2-score-500
+**Why:** `payload: dict` (the A7 trigger) is on an unchanged line, so A7 doesn't fire, and `int(...)` on untrusted input is not a pattern the scripts flag: whether a 500 is reachable depends on the input contract.
+**Change:** none in Pipeline A; B7 owns business-level validation and found it. Candidate deterministic check for the backlog: `int()`/`float()` on request data outside a `try` in a route handler.
 
 ### fn-pr4-not-minimized
 **Why:** Minimization depends on purpose ("does support need the birthdate?"), which no static rule can judge. Pipeline A did catch the same PR's log exposure (Critical #1) through the helper summary, so the PR is blocked anyway.
@@ -91,18 +99,21 @@ Each entry below explains one item of the list. `python -m gate eval --check-ana
 **Change:** The AI prompt receives `docs/API-AND-BUSINESS-RULES.md` as context so B11 can compare against BR-4. A mutation-style check (fail when a PR changes a documented business rule without changing its BR row) is in the backlog.
 
 ### Severity disagreement (not an FP/FN)
-`feature/analytics-archive` was matched, but at **High** (A4 dataset without retention, P2 copy into a collection) while the ground truth says **Critical**: the copy holds minors' personal data kept indefinitely. The PR is still blocked (High blocks), so the outcome is right, but the severity under-states the risk. Backlog item 5 in DECISIONS.md: escalate to Critical when the copied payload contains personal fields.
+`feature/analytics-archive` was matched, but at **High** (A4 dataset without retention, P2 copy into a collection) while the ground truth says **Critical**: the copy holds minors' personal data kept indefinitely. The PR is still blocked (High blocks), so the outcome is right, but the severity under-states the risk. Backlog item 4 in DECISIONS.md: escalate to Critical when the copied payload contains personal fields.
 
 ## Trust policy
 
-Based on the deterministic run above (AI rows to be added after the AI run):
+Based on the runs above (deterministic, and AI with `gemini-3.8-flash`, LOW thinking, fixed seed):
 
 | Severity | Source | Precision measured | Policy |
 |----------|--------|--------------------|--------|
 | Critical | Deterministic | 1.00 (4/4), 0 FP on the 2 sound PRs | **Block automatically** (fail + `quality-gate/critical`). |
 | High | Deterministic | 1.00 (6/6) | **Block** with a request-changes review (`quality-gate/high`). |
 | Medium / Low | Deterministic | 1.00 (1/1) / none | Comment only. |
-| Critical / High | AI | pending | Blocks by team decision (AGENTS#14), but `GATE_MODE` stays `shadow` until the AI run shows ≥ 0.9 precision on Critical and no blocking finding on the 2 sound PRs. If it falls short, AI Criticals are demoted to High (dismissable review) until prompts improve. |
-| Medium / Low | AI | pending | Comment only, always. |
+| Critical | AI | 1.00 (3/3), identical across 3 runs (fixed seed) | **Block automatically** (team decision, AGENTS#14). |
+| High | AI | 1.00 (4/4) | **Block** (request-changes review). |
+| Medium / Low | AI | — (none produced) | Comment only, always. |
+
+**Recommendation:** switch `GATE_MODE` to `enforce`: the combined gate's verdict matches the ground truth on all 8 PRs. Measured AI cost: $0.0027–$0.0041 per review (≈ 3.5–4.3k input tokens, 5–331 output, 0 thinking).
 
 Every block can be lifted by a production approver with `/gate-override <reason>`, recorded on the PR (ADR-3).

@@ -29,10 +29,13 @@ prs:
   - branch: feature/score-validation
     title: Validate lesson and score on progress recording
     body: We were accepting any lesson_id and out-of-range scores. Adds validation and tests.
-    verdict: sound
-    expected: []
+    verdict: block
+    expected:
+      # Decided 2026-10-07 after the first AI run (EVAL.md): the PR's new validation still lets a
+      # non-numeric score crash with a 500; the line is new and AGENTS#5 requires a 4xx.
+      - {id: pr2-score-500, rule: AGENTS#5, severity: high, file: app/main.py, lines: [50, 54],
+         why: "int(payload.get('score')) on a non-numeric score raises ValueError -> 500"}
     acceptable:
-      - {rule: AGENTS#5, file: app/main.py}   # non-numeric score still raises a 500 (pre-existing gap)
       - {rule: AGENTS#6}                      # tests mutate shared in-memory state
 
   - branch: fix/mobile-sync-visibility

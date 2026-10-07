@@ -68,6 +68,17 @@ class DiffContext:
         return cls(repo, dict(parse_unified_diff(text)), "refs", base, head, **meta)
 
     @classmethod
+    def from_worktree(cls, repo: Path, base: str) -> DiffContext:
+        """Everything not yet on `base`: commits, staged and unstaged edits, and untracked files."""
+        repo = Path(repo).resolve()
+        merge_base = git(repo, "merge-base", base, "HEAD").strip()
+        text = git(repo, "diff", "--unified=0", "--no-color", "--no-ext-diff", "--diff-filter=ACMR", merge_base)
+        changed: dict[str, set[int] | None] = dict(parse_unified_diff(text))
+        for path in git(repo, "ls-files", "--others", "--exclude-standard").splitlines():
+            changed[path] = None
+        return cls(repo, changed, "worktree", merge_base, "WORKTREE")
+
+    @classmethod
     def from_staged(cls, repo: Path) -> DiffContext:
         repo = Path(repo).resolve()
         text = git(repo, "diff", "--cached", "--unified=0", "--no-color", "--no-ext-diff", "--diff-filter=ACMR")
@@ -143,3 +154,14 @@ class DiffContext:
             elif line.startswith("+") and not line.startswith("+++"):
                 added.append((commit, path, line[1:]))
         return added
+
+
+def default_base(repo: Path) -> str:
+    """The branch a PR would target: origin/develop, else origin/main, else main."""
+    for candidate in ("origin/develop", "origin/main", "main"):
+        try:
+            git(repo, "rev-parse", "--verify", "--quiet", candidate)
+            return candidate
+        except RuntimeError:
+            continue
+    raise RuntimeError("no base branch found (origin/develop, origin/main or main); pass --base")

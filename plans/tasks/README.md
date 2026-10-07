@@ -7,7 +7,7 @@ Breakdown of [../quality-gate-classification.md](../quality-gate-classification.
 ## Conventions
 
 - **Naming:** `R<rule>-<pipeline>`. `A` = deterministic (scripts, linters, gate code), `B` = AI (Gemini). Gate infrastructure tasks that belong to neither have no suffix. A rule enforced by both pipelines has two tasks.
-- **One test per task.** Each task defines exactly one test function that proves its policy:
+- **One test per task.** Each task defines exactly one test function that proves its policy (exception: R14-C has one offline test per cost control):
   - It runs the check on a **violation fixture** and asserts the expected findings (`rule`, `severity`, `file`, and `line` when available).
   - It runs the same check on a **compliant fixture** and asserts **no** finding for that rule, to guard against false positives.
 - **Test locations:**
@@ -23,8 +23,8 @@ Breakdown of [../quality-gate-classification.md](../quality-gate-classification.
 |-------|-------|
 | 1. Foundation | [R01-P](R01-P-is-minor-in-pii-fields.md), [R11-A](R11-A-finding-schema.md), [R11-B](R11-B-ai-output-validation.md), [R09-A](R09-A-severity-actions.md) |
 | 2. Deterministic checks | [R08-A](R08-A-secrets.md), [R01-A](R01-A-pii-exposure.md), [R02-A](R02-A-outbound-minors-data.md), [R03-A](R03-A-retention.md), [R05-A](R05-A-input-validation-errors.md), [R06-A](R06-A-tests-coverage.md), [R07-A](R07-A-simplicity.md), [R20-A](R20-A-docs-updated.md), [R16-A](R16-A-readme-smoke.md), [R18-A](R18-A-decision-records.md) |
-| 3. AI checks | [R14-B](R14-B-ai-determinism.md), [R01-B](R01-B-pii-exposure.md), [R02-B](R02-B-minors-data-leaving.md), [R03-B](R03-B-secondary-copies.md), [R04-B](R04-B-data-minimization.md), [R05-B](R05-B-business-validation.md), [R06-B](R06-B-test-quality.md), [R09-B](R09-B-logic-bugs-style.md), [R20-B](R20-B-docs-accuracy.md), [R21-B](R21-B-single-source-rules.md) |
-| 4. Orchestration | [R10](R10-pipeline-orchestration.md), [R17](R17-local-hooks.md) |
+| 3. AI checks | [R14-B](R14-B-ai-determinism.md), [R14-C](R14-C-ai-cost-controls.md), [R01-B](R01-B-pii-exposure.md), [R02-B](R02-B-minors-data-leaving.md), [R03-B](R03-B-secondary-copies.md), [R04-B](R04-B-data-minimization.md), [R05-B](R05-B-business-validation.md), [R06-B](R06-B-test-quality.md), [R09-B](R09-B-logic-bugs-style.md), [R20-B](R20-B-docs-accuracy.md), [R21-B](R21-B-single-source-rules.md) |
+| 4. Orchestration | [R10](R10-pipeline-orchestration.md), [R17](R17-local-hooks.md), [R17-B](R17-B-check-all.md) |
 | 5. Evaluation | [R12](R12-eval-metrics.md), [R13](R13-failure-analysis.md) |
 | 6. Enforcement | [R14-A](R14-A-critical-block-override.md), [R15](R15-triggers-required-checks.md) |
 

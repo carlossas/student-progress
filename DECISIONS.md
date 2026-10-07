@@ -32,7 +32,13 @@ Mini-ADRs for the quality gate. Context and rule numbers: [AGENTS.md](AGENTS.md)
 
 **Why.** Cost and latency scale with calls; one call with the whole diff gives the model cross-file context. LOW thinking matched higher levels on mapping tasks in the spike at a fraction of the cost. Validation keeps hallucinated locations out of PR comments.
 
-**Trade-off.** The fallback chain can serve a different model than configured; the run summary names the model that answered.
+**Stability:** temperature 0 alone was not enough on 3.8 Flash (a High finding came and went between identical runs); a fixed sampling `seed` makes reviews repeatable (R14-B).
+
+**Cost controls** (plan section 9, summary for leadership in [docs/PIPELINES.md](docs/PIPELINES.md#cost-optimization)): results cached by a hash of the full request (unchanged re-runs cost $0); output capped at 2048 tokens (configurable, truncation fails loudly); system prompt byte-identical and placed first so Gemini's prompt cache bills it at 10%; system prompt limited to the rules the AI judges (−21%).
+
+**Large PRs:** big files go as changed hunks, generated files are never sent, and files are packed into requests of ≤ 30k input tokens (one output cap each). Cross-file context between batches is lost, which is acceptable because files stay in path order (a module and its tests usually share a request) and the deterministic summaries already follow helpers across files.
+
+**Trade-off.** The fallback chain can serve a different model than configured; the run summary names the model that answered. The output cap is a guess until real reviews are measured: too low fails reviews (loudly), too high only costs money.
 
 ## ADR-5 · Evaluation scope and matching
 
@@ -43,9 +49,8 @@ Mini-ADRs for the quality gate. Context and rule numbers: [AGENTS.md](AGENTS.md)
 ## ADR-6 · Left out, in priority order
 
 1. **CODEOWNERS for `.github/` and `gate/`**: closes the workflow-edit gap in ADR-2. Five minutes, needs the team's GitHub handles.
-2. **AI results cache keyed by diff hash**: re-runs on unchanged diffs (re-opened PRs, description edits) would not spend credits.
-3. **Fork PRs**: `GITHUB_TOKEN` is read-only there, so publishing fails. Needs a `pull_request_target` reporter that never checks out PR code.
-4. **Prompt-injection tests** in the golden set (PR text that tries to suppress findings).
-5. **Escalate deterministic retention findings to Critical** when the copied payload contains personal fields (today High; see the severity disagreement in EVAL.md).
-6. **SARIF upload** so findings also appear in GitHub code scanning.
-7. **A larger golden set**: 8 PRs give wide confidence intervals; every real FP/FN from production should become a fixture.
+2. **Fork PRs**: `GITHUB_TOKEN` is read-only there, so publishing fails. Needs a `pull_request_target` reporter that never checks out PR code.
+3. **Prompt-injection tests** in the golden set (PR text that tries to suppress findings).
+4. **Escalate deterministic retention findings to Critical** when the copied payload contains personal fields (today High; see the severity disagreement in EVAL.md).
+5. **SARIF upload** so findings also appear in GitHub code scanning.
+6. **A larger golden set**: 8 PRs give wide confidence intervals; every real FP/FN from production should become a fixture.

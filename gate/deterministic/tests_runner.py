@@ -18,8 +18,13 @@ NO_TESTS_COLLECTED = 5
 
 
 def run(ctx: DiffContext, out_dir: Path | None = None) -> list[Finding]:
-    if not any(p.endswith(".py") for p in ctx.files()):
-        return []
+    return execute(ctx, out_dir)[0]
+
+
+def execute(ctx: DiffContext, out_dir: Path | None = None, always: bool = False) -> tuple[list[Finding], str]:
+    """(findings, pytest's summary line). Skipped when no Python changed, unless `always`."""
+    if not always and not any(p.endswith(".py") for p in ctx.files()):
+        return [], "skipped: no Python changes"
     with tempfile.TemporaryDirectory() as tmp:
         out = Path(out_dir or tmp)
         out.mkdir(parents=True, exist_ok=True)
@@ -43,4 +48,5 @@ def run(ctx: DiffContext, out_dir: Path | None = None) -> list[Finding]:
         if coverage.exists():
             changed = {p: ctx.lines(p) for p in ctx.files()}
             findings += coverage_findings(coverage.read_text(encoding="utf-8"), ctx.repo, changed)
-    return findings
+    lines = [ln.strip("= ") for ln in result.stdout.strip().splitlines() if ln.strip()]
+    return findings, (lines[-1] if lines else "no output")

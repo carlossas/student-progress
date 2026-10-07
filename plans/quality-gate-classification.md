@@ -143,7 +143,7 @@ Semgrep taint tracking only follows data inside one function, which is why Pipel
 | B12 | — | Style, naming, refactoring ideas | Low |
 
 **Prompt inputs:** PR title + description, unified diff, full content of changed files, `AGENTS.md`, `app/models.py`, Pipeline A findings + P4/A5 signals.
-**Config:** `GEMINI_API_KEY` as a GitHub secret (rule 8); `GEMINI_MODEL` as a repo variable; temperature 0; low thinking level; JSON response schema.
+**Config:** `GEMINI_API_KEY` as a GitHub secret (rule 8); `GEMINI_MODEL`, `GEMINI_THINKING_LEVEL`, `GEMINI_MAX_OUTPUT_TOKENS` as repo variables; temperature 0; low thinking level; JSON response schema. Cost controls: section 9.
 
 ## 6. Local hooks (husky)
 
@@ -173,3 +173,34 @@ Deviations from the sections above, with the reason in [DECISIONS.md](../DECISIO
 | ruff `E501` as Low | Ignored in `gate/config/ruff.toml` | `ruff format` owns line length; long message strings can't be split |
 | AI tests `tests/gate/ai/test_rXX_*.py` | `tests/gate/ai/test_rXX_*_ai.py` | Avoids module-name clashes with the deterministic tests |
 | Logic bugs / style (B11, B12) | Reported under `AGENTS#9` (S2/S3 definitions) | They have no rule of their own |
+
+## 9. AI cost controls
+
+Output (and thinking) tokens cost 5× input, so the levers are: fewer calls, less output, cheaper input. Executive view and model outlook: [docs/PIPELINES.md](../docs/PIPELINES.md#cost-optimization).
+
+| ID | Control | Implementation | Tested by |
+|----|---------|----------------|-----------|
+| C1 | **Result cache** keyed by SHA-256 of the full request (diff and changed files, PR title/description, deterministic findings, system prompt, model chain, thinking level, output cap). Hit → no API call, $0. Malformed answers are never cached. | `gate/ai/review.py`; CI restores/saves it with `actions/cache` (`ai --key-only` computes the key without the API key); local cache in `.gate-cache/ai` | [R14-C](tasks/R14-C-ai-cost-controls.md) |
+| C2 | **Output cap and terse format**: `GEMINI_MAX_OUTPUT_TOKENS` (default 2048, was 8192); messages ≤ 2 sentences, snippets ≤ 6 lines. A capped (truncated) review is a blocking gate error, never a partial pass. Tune the cap after the first measured runs. | `gate/ai/config.py`, `client.py` (`OutputTruncated`), `prompts/system.md` | R14-C |
+| C3 | **Prompt caching**: system prompt byte-identical for every PR; repository context placed before the PR content to extend the cacheable prefix. Cached tokens priced at 10% of input in the cost line. | `gate/ai/prompt_builder.py`, `pricing.py` (measured: 0 cached tokens; prompt likely under Google's implicit-cache minimum) | R14-C |
+| C4 | **Smaller system prompt**: only the AGENTS.md rules the AI judges (1–6, 20, 21) plus the field table; script-only rules omitted. ≈ 3.1k → ≈ 2.4k tokens (−21%). | `prompt_builder.agents_excerpt` | R14-C |
+
+| C5 | **Large PRs**: files > 300 lines sent as changed hunks ± 30 lines (± 5 when a single file exceeds the budget); generated files (`eval/results/`, lockfiles, coverage/junit XML) never sent; files packed in order into requests of ≤ `GEMINI_MAX_INPUT_TOKENS` (default 30k, estimated locally at 3.0 chars/token, calibrated on a real run); one call per request, findings merged and deduplicated, each request cached separately. A typical PR stays one byte-identical request. | `prompt_builder.plan_batches`, `numbered`, `reviewable_files`; `review.py` | R14-C |
+
+| C6 | **Per-run cost logging**: the `report` job adds the AI spend (all requests, $0 when cached) to the CI runner minutes (each job rounded up × `GATE_ACTIONS_USD_PER_MINUTE`, default $0.006) and logs it as a notice, in the summary/PR comment and in `cost.json`. `check-all` prints the local AI spend. | `gate/report/cost.py`, `gate/__main__.py` (`report`), `gate/local.py` | `test_pipeline_cost.py` |
+
+Not adopted (yet): Batch/Flex tiers (too slow for blocking reviews; fine for eval), model routing to Flash-Lite (needs the golden-set evaluation first).
+
+## 10. Developer tooling (AGENTS#17)
+
+One command runs everything a developer needs before opening a PR: `python -m gate all` (wrappers `scripts/check-all.sh`, `scripts/check-all.ps1`). Guide: [PIPELINE_README.md](../PIPELINE_README.md).
+
+| Step | What | Blocks on |
+|------|------|-----------|
+| 1 | Pre-commit fast checks on staged files | Critical/High |
+| 2 | Lint: repo-wide `ruff check` (same as CI) + gate format policy on changed files (`python -m gate lint [--fix]`) | Any lint error |
+| 3 | Full test suite + 85% changed-line coverage | Failing test, coverage |
+| 4 | Deterministic pipeline on commits + uncommitted + untracked changes vs the PR's base | Critical/High |
+| 5 | AI pipeline, only if `GEMINI_API_KEY` is set and valid (checked with a free metadata request); otherwise skipped with the reason | Critical/High |
+
+Exit code 0 = READY, 1 = BLOCKED. Task: [R17-B](tasks/R17-B-check-all.md).

@@ -206,7 +206,7 @@ def run_pr(pr: dict, base: str, use_ai: bool, reuse_ai: bool) -> dict:
         elif use_ai:
             from gate.ai.review import review
 
-            ai = review(ctx, result.findings, result.signals)
+            ai = review(ctx, result.findings, result.signals, cache_dir=GATE_ROOT / ".gate-cache" / "ai")
             ai_findings = ai.findings
             write_json(ai_path, ai_findings)
             (RESULTS_DIR / f"{_slug(pr['branch'])}.ai-meta.json").write_text(

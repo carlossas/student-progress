@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from google import genai
 from google.genai import errors, types
 
-from gate.ai.config import MAX_OUTPUT_TOKENS, REQUEST_TIMEOUT_MS, TEMPERATURE, GeminiSettings
+from gate.ai.config import REQUEST_TIMEOUT_MS, SEED, TEMPERATURE, GeminiSettings
 from gate.ai.pricing import Usage
 
 log = logging.getLogger("gate.ai")
@@ -37,6 +37,10 @@ class GeminiUnavailable(RuntimeError):
     def __init__(self, message: str, detail: list[ModelStatus]):
         super().__init__(message)
         self.detail = detail
+
+
+class OutputTruncated(GeminiUnavailable):
+    """The review was cut by the output cap: a gate error, never a partial (silently passing) review."""
 
 
 def describe(model: str, e: Exception) -> ModelStatus:
@@ -90,10 +94,13 @@ class GeminiClient:
         config = types.GenerateContentConfig(
             system_instruction=system,
             temperature=TEMPERATURE,
-            max_output_tokens=MAX_OUTPUT_TOKENS,
+            seed=SEED,
+            max_output_tokens=self.settings.max_output_tokens,
             thinking_config=types.ThinkingConfig(thinking_level=self.settings.thinking_level),
             response_mime_type="application/json",
             response_json_schema=schema,
+            # No tools: a single structured answer. Also silences the SDK's AFC warning.
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )
         results: list[ModelStatus] = []
         for model in self.settings.models:
@@ -102,6 +109,13 @@ class GeminiClient:
                 try:
                     res = self._client.models.generate_content(model=model, contents=prompt, config=config)
                     usage = Usage(model=model).add(res.usage_metadata, model)
+                    finish = str(res.candidates[0].finish_reason) if res.candidates else ""
+                    if "MAX_TOKENS" in finish:
+                        raise OutputTruncated(
+                            f"{model} hit the output cap ({self.settings.max_output_tokens} tokens) before finishing "
+                            "the review. Raise the GEMINI_MAX_OUTPUT_TOKENS repo variable and re-run.",
+                            results,
+                        )
                     if not res.text:
                         reason = res.candidates[0].finish_reason if res.candidates else "no candidates"
                         raise GeminiUnavailable(
@@ -125,3 +139,21 @@ class GeminiClient:
         raise GeminiUnavailable(
             f"Every Gemini model failed.\n{lines}\n{BILLING_HINT[classify_limit(results)]}".strip(), results
         )
+
+
+def probe(settings: GeminiSettings) -> tuple[bool, str]:
+    """(usable, reason). Reads the model's metadata: checks key and model without spending tokens."""
+    if not settings.api_key:
+        return False, "GEMINI_API_KEY is not set"
+    model = settings.models[0]
+    try:
+        # Keep a reference: google-genai closes a client when it is garbage-collected,
+        # which would make the probe report "unreachable" for a perfectly valid key.
+        client = genai.Client(api_key=settings.api_key, http_options=types.HttpOptions(timeout=15_000))
+        client.models.get(model=model)
+    except errors.APIError as e:
+        status = describe(model, e)
+        return False, f"{model}: HTTP {status.code} {status.status} {status.message}".strip()
+    except Exception as e:  # noqa: BLE001 - network/DNS problems mean "skip the AI step", reported to the user
+        return False, f"cannot reach Gemini: {e}"
+    return True, ""

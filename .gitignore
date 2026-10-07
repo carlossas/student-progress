@@ -6,3 +6,5 @@ __pycache__/
 node_modules/
 gate-out/
 eval/results/*.tmp
+.gate-cache/
+.coverage
