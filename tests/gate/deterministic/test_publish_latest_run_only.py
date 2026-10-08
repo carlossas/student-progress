@@ -112,3 +112,17 @@ def test_old_reviews_go_even_when_no_inline_comment_changes():
 
     run(gh, [docs])  # nothing changed: no new review
     assert len(gh.reviews_) == 3
+
+
+def test_no_line_annotations_on_a_pr():
+    # Every workflow run's line annotations stay in "Files changed": #14 showed the same Critical 4 times.
+    from gate.__main__ import critical_annotations
+
+    leak = Finding("AGENTS#1", "critical", "deterministic:pii_flow", "app/main.py", "Name logged.", "Log the id.", 59)
+    assert critical_annotations([leak], on_pr=True) == [
+        "::error title=Quality gate::1 critical finding(s); see the PR comments."
+    ]
+    assert critical_annotations([leak], on_pr=False) == [
+        "::error file=app/main.py,line=59,title=AGENTS#1 critical::Name logged."
+    ]
+    assert critical_annotations([bug("high")], on_pr=True) == []
