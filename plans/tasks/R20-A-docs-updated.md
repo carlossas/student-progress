@@ -1,6 +1,6 @@
 # R20-A — Docs updated in the same change (deterministic)
 
-**Rule:** AGENTS#20 · **Pipeline:** A · **Check:** A14 · **Severity:** High · **Depends on:** R11-A
+**Rule:** AGENTS#20 · **Pipeline:** A · **Check:** A14 · **Severity:** Medium (was High until PR #22: it blocked the only sound PR) · **Depends on:** R11-A
 
 ## Scope
 `gate/deterministic/docs_touched.py`, diff mode: if any file under `app/` changed, both `docs/ARCHITECTURE.md` and `docs/API-AND-BUSINESS-RULES.md` must appear in the diff.
@@ -12,6 +12,6 @@
 - **Violation input:** a changed-file list of `app/main.py` and `tests/test_progress.py`.
 - **Compliant input:** a changed-file list of `app/main.py`, `tests/test_progress.py`, `docs/ARCHITECTURE.md` and `docs/API-AND-BUSINESS-RULES.md`.
 - **Expect:**
-  - violation: one High `AGENTS#20` finding that names both docs;
+  - violation: one Medium `AGENTS#20` finding that names both docs;
   - compliant: zero findings;
   - a docs-only change (no `app/` files) also produces zero findings.
