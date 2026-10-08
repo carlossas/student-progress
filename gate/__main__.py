@@ -20,6 +20,7 @@ from pathlib import Path
 
 from gate.config import SEVERITIES
 from gate.diff import DiffContext, default_base
+from gate.env import load_dotenv
 from gate.report.actions import decide, render_summary
 from gate.report.finding import Finding, read_findings, read_signals, sort_findings, write_json
 from gate.report.merge import dedupe
@@ -377,6 +378,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.WARNING, format="%(name)s %(levelname)s %(message)s")
+    load_dotenv()  # local GEMINI_API_KEY etc.; real env vars (CI secrets) win
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     args = build_parser().parse_args(argv)

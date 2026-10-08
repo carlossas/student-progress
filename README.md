@@ -34,6 +34,14 @@ CI runs these exact commands on a clean machine (AGENTS#16). Measured from a fre
 
 ## Run the quality gate
 
+**0. Gemini key (only for `--ai`), once:** copy the template and put your key in it. `.env` is gitignored and the gate loads it on every run.
+
+```bash
+cp .env.example .env          # Windows CMD: copy .env.example .env
+```
+
+Then edit `.env`: `GEMINI_API_KEY=your-key` ([get one](https://aistudio.google.com/apikey)). A variable already set in your shell wins over the file. Without a key the AI step is skipped and the scripts decide on their own.
+
 **1. On the 8 golden PRs (the challenge's test set):**
 
 ```bash
@@ -58,8 +66,6 @@ npm install                               # optional: pre-commit / pre-push hook
 ```
 
 Critical/High block, Medium/Low only comment. On GitHub it runs in `enforce` on `develop`; `main` doesn't have it yet.
-
-Gemini key: `export GEMINI_API_KEY=...` (PowerShell: `$env:GEMINI_API_KEY = "..."`). Without it the AI step is skipped and the scripts decide on their own.
 
 `gate eval` refreshes the cached results in `eval/results/`. Run `git checkout -- eval/results` before switching branches if you don't want to keep them.
 
