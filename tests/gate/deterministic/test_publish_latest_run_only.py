@@ -9,7 +9,7 @@ class FakeGitHub:
     """In-memory PR: inline comments and reviews, enough for publish()."""
 
     def __init__(self):
-        self.comments, self.reviews_, self.dismissed, self.next_id = [], [], [], 1
+        self.comments, self.reviews_, self.dismissed, self.next_id = [], [], [], 100
 
     def _id(self):
         self.next_id += 1
@@ -88,3 +88,18 @@ def test_regraded_or_fixed_findings_leave_no_stale_comments():
     run(gh, [])
     assert gh.comments == []
     assert all(r["body"] == SUPERSEDED for r in gh.reviews_)
+
+
+def test_old_reviews_go_even_when_no_inline_comment_changes():
+    # PR #12: the docs rule (file-level, no inline comment) used to be High; it is Medium now.
+    gh = FakeGitHub()
+    docs = Finding("AGENTS#20", "medium", "deterministic:change_policy", "app/main.py", "Docs.", "Update docs.")
+    old = f"{STICKY_MARKER}\nQuality gate review.\n\n⛔ **HIGH** · `AGENTS#20`"
+    gh.reviews_ += [{"id": 1, "state": "COMMENTED", "body": old}, {"id": 2, "state": "DISMISSED", "body": old}]
+
+    run(gh, [docs])
+    assert [r["body"] == SUPERSEDED for r in gh.reviews_] == [True, True, False]
+    assert "MEDIUM" in gh.reviews_[-1]["body"]
+
+    run(gh, [docs])  # nothing changed: no new review
+    assert len(gh.reviews_) == 3
