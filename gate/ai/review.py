@@ -24,6 +24,7 @@ from gate.ai.prompt_builder import plan_batches, response_schema, system_prompt,
 from gate.ai.validate import validate_ai_output
 from gate.config import valid_rules
 from gate.diff import DiffContext
+from gate.report.baseline import demote_preexisting
 from gate.report.finding import Finding, Signal
 from gate.report.merge import dedupe
 
@@ -91,6 +92,7 @@ def _review_one(ctx, system, user, schema, settings, client, cache_dir) -> tuple
     if cache_file is not None and cache_file.exists():
         entry = json.loads(cache_file.read_text(encoding="utf-8"))
         findings, dropped = validate_ai_output(entry["raw"], ctx, valid_rules())
+        findings = demote_preexisting(findings, ctx)
         log.info("AI review served from cache %s (model %s)", key[:12], entry["model"])
         cost = {**Usage(model=entry["model"]).cost(), "original_total_usd": entry.get("total_usd", 0.0)}
         return AIResult(findings, dropped, cost, entry["model"], cached=True, cache_key=key), client
@@ -100,6 +102,7 @@ def _review_one(ctx, system, user, schema, settings, client, cache_dir) -> tuple
         client = GeminiClient(settings)
     raw, model, usage = client.generate_json(system, user, schema)
     findings, dropped = validate_ai_output(raw, ctx, valid_rules())  # raises on malformed output: never cached
+    findings = demote_preexisting(findings, ctx)
     cost = usage.cost()
     if cache_file is not None:
         cache_file.parent.mkdir(parents=True, exist_ok=True)

@@ -29,6 +29,7 @@ PATTERNS = [
 ]
 SECRET_FILES = re.compile(r"(^|/)(\.env(\.[\w-]+)?|id_rsa|id_ed25519|.+\.pem|.+\.p12|credentials\.json)$")
 SAFE_ENV_FILES = (".env.example", ".env.sample", ".env.template")
+REDACTED = "[REDACTED_SECRET]"
 
 
 def _allowlist() -> set[str]:
@@ -52,6 +53,21 @@ def scan_text(text: str) -> tuple[str, str] | None:
                 continue
             return kind, _mask(value)
     return None
+
+
+def mask_secrets(text: str) -> str:
+    """`text` with every secret-shaped value replaced, line count unchanged.
+
+    Used before anything leaves for the LLM: a committed key must not reach a third party
+    because the PR that leaked it got reviewed. Masks more eagerly than `scan_text` reports
+    (no env/example exceptions): a false mask costs nothing, a missed one is a leak.
+    """
+    for _, pattern in PATTERNS:
+        text = pattern.sub(
+            lambda m: m.group(0).replace(m.group(1), REDACTED) if m.groups() else REDACTED,
+            text,
+        )
+    return text
 
 
 def _variable(line: str) -> str:

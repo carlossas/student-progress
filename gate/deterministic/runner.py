@@ -13,6 +13,7 @@ from gate.deterministic import (
     pii_alias,
     pii_flow,
     pii_registry,
+    prompt_injection,
     retention,
     secrets_scan,
     tests_runner,
@@ -21,6 +22,7 @@ from gate.deterministic import (
     workflow_policy,
 )
 from gate.diff import DiffContext
+from gate.report.baseline import demote_preexisting
 from gate.report.finding import Finding, Signal
 from gate.report.merge import dedupe
 
@@ -35,6 +37,7 @@ FAST: dict[str, Callable[[DiffContext], list[Finding]]] = {
     "validation": validation.check,
     "lint": lint.check,
     "todo": todo_ticket.check,
+    "prompt_injection": prompt_injection.check,
 }
 POLICY: dict[str, Callable[[DiffContext], list[Finding]]] = {
     "tests_touched": change_policy.tests_touched,
@@ -70,5 +73,5 @@ def run(ctx: DiffContext, *, fast_only: bool = False, with_tests: bool = True, o
     if not fast_only:
         result.signals += _guarded(result, "pii_alias", lambda: pii_alias.signals(ctx))
         result.signals += _guarded(result, "outbound", lambda: pii_flow.outbound_signals(ctx))
-    result.findings = dedupe(result.findings)
+    result.findings = demote_preexisting(dedupe(result.findings), ctx)
     return result

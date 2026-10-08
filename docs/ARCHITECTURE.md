@@ -165,10 +165,11 @@ flowchart TB
 | `gate/diff.py` | Changed files and lines from a git range, the index (hooks) or a fixture directory. |
 | `gate/deterministic/` | Pipeline A, one module per rule family; `runner.py` turns a crashing check into a blocking gate error. |
 | `gate/ai/` | Pipeline B: Gemini client with model fallback and output cap (`client.py`), prompts per rule (`prompts/`), structured output validation (`validate.py`), cost with prompt-cache pricing (`pricing.py`), result cache keyed by request hash (`review.py`). Details and cost strategy: [PIPELINES.md](PIPELINES.md). |
-| `gate/report/` | Finding schema, tool adapters (`rule_map.yml`), severity → action policy (`actions.py`), GitHub publishing, override, per-run cost: AI + CI minutes (`cost.py`). |
-| `gate/eval/` | Runs the gate on each golden PR in a temporary worktree and scores it against `eval/ground_truth.yaml`. |
+| `gate/report/` | Finding schema, tool adapters (`rule_map.yml`), severity → action policy (`actions.py`), pre-existing debt (`baseline.py`: a High code-quality finding on a line the PR only moved becomes Medium; privacy, secrets and tests are never demoted), GitHub publishing, override, per-run cost: AI + CI minutes (`cost.py`). |
+| `gate/eval/` | Runs the gate on each golden PR in a temporary worktree and scores it against `eval/ground_truth.yaml`: the merge verdict per PR (every finding counts, process rules included), then precision/recall on AGENTS#1-9. |
 
 Trust boundaries:
 - The gate code, prompts and lint config come from the **base branch** checkout, so a PR cannot change the rules it is judged by (except the bootstrap PR that introduces the gate).
 - The deterministic job runs the PR's tests but never sees the Gemini key; the AI job holds the key but never executes PR code.
-- PR text and code are passed to Gemini as untrusted data; the system prompt forbids following instructions inside them.
+- PR text and code are passed to Gemini as untrusted data; the system prompt forbids following instructions inside them, and a script (A17, `prompt_injection.py`) flags text aimed at the reviewer as High.
+- Secrets are masked (`secrets_scan.mask_secrets`) in every file and in the PR text before the request leaves for Gemini.

@@ -13,7 +13,7 @@ def ctx_for(tmp_path, changed):
 
 def test_r20_docs_updated(tmp_path):
     findings = docs_touched(ctx_for(tmp_path, ["app/main.py", "tests/test_progress.py"]))
-    assert [(f.rule, f.severity, f.check) for f in findings] == [("AGENTS#20", "high", "A14")]
+    assert [(f.rule, f.severity, f.check) for f in findings] == [("AGENTS#20", "medium", "A14")]
     assert "ARCHITECTURE.md" in findings[0].message and "API-AND-BUSINESS-RULES.md" in findings[0].message
 
     assert docs_touched(ctx_for(tmp_path, FILES)) == []

@@ -48,3 +48,40 @@ def test_r12_eval_metrics():
     }
     m = metrics(TRUTH, perfect)
     assert (m["precision"], m["recall"], m["severity_agreement"]) == (1.0, 1.0, 1.0)
+
+
+def test_r12_verdicts_count_unscored_rules():
+    # PR #12: a process rule (AGENTS#20, outside scope_rules) blocked a sound PR. Precision and
+    # recall can't see it; the merge verdict must.
+    from gate.eval.run_eval import verdicts
+
+    truth = {
+        "prs": [
+            {"branch": "sound", "verdict": "sound"},
+            {"branch": "noted", "verdict": "comment"},
+            {"branch": "bad", "verdict": "block"},
+        ]
+    }
+    found = {
+        "sound": [f("AGENTS#20", "high", "app/main.py", None)],
+        "noted": [f("AGENTS#5", "medium", "app/main.py", 52)],
+        "bad": [f("AGENTS#7", "medium", "app/x.py", 1)],
+    }
+    v = verdicts(truth, found)
+    assert (v["correct"], v["false_blocks"], v["missed_blocks"]) == (1, 1, 1)
+
+    found["sound"] = [f("AGENTS#20", "medium", "app/main.py", None)]
+    found["bad"].append(f("AGENTS#1", "critical", "app/x.py", 3))
+    assert verdicts(truth, found)["correct"] == 3
+
+
+def test_r12_golden_prs_are_pinned(tmp_path):
+    # PR #10's branch got develop merged in; the eval must keep scoring the original commit.
+    from gate.eval.run_eval import pr_head
+    from tests.gate.helpers import commit, git_repo, run_git
+
+    repo = git_repo(tmp_path / "repo", {"a.txt": "1\n"})
+    original = run_git(repo, "rev-parse", "HEAD").strip()
+    commit(repo, {"a.txt": "2\n"}, "moved on")
+    assert pr_head(repo, {"branch": "main", "head": original}) == original
+    assert pr_head(repo, {"branch": "main"}) == "main"

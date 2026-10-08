@@ -43,7 +43,7 @@ def docs_touched(ctx: DiffContext) -> list[Finding]:
     return [
         Finding(
             rule="AGENTS#20",
-            severity="high",
+            severity="medium",  # process rule: comment, never a block (DECISIONS ADR-3)
             source="deterministic:change_policy",
             check="A14",
             file=sources[0],

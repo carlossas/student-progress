@@ -11,7 +11,7 @@ How the two review pipelines work, what they cost and how we keep that cost down
 
 **What it decides.** Critical and High problems block the merge; Medium and Low leave a comment. A production approver can override a block, and every override is recorded on the PR.
 
-**How well it works.** On the 8 reference PRs, both pipelines together found **all 18 expected problems with zero false alarms** (precision 1.00, recall 1.00), and the merge verdict matched ours on every PR. The rules engine alone found 11 (recall 0.60); the AI reviewer found the other 7: data minimization, two logic bugs, weak tests, and a validation gap that still returned a 500.
+**How well it works.** On the 8 reference PRs the gate makes the right merge call on all 8 (no false blocks, no missed blocks). Per finding: precision 1.00, recall 0.88 (16 of 18). The two misses are minors' data leaving the service. Neither pipeline gets there alone. Details: [EVAL.md](../EVAL.md).
 
 **What it costs.**
 
@@ -59,7 +59,8 @@ What it checks (rule numbers link the behavior to [AGENTS.md](../AGENTS.md)):
 | Input & errors | Route handlers taking raw `dict`; bare/broad/silent `except` | #5 | High |
 | Tests | Suite passes; service code changed without tests; < 85% coverage of changed lines | #6 | High |
 | Hygiene | Unused code, unreachable code, TODO without ticket, formatting | #7 | Medium / Low |
-| Process | Docs updated with code; decision records exist; the gate workflow not weakened; README works on a clean machine | #20, #18, #15, #16 | High / Low / High / Medium |
+| Reviewer integrity | Text in the PR aimed at the AI reviewer (prompt injection) | #15 | High |
+| Process | Docs updated with code; decision records exist; the gate workflow not weakened; README works on a clean machine | #20, #18, #15, #16 | Medium / Low / High / Medium (docs and records never block) |
 
 It also emits **hints** (never posted) for the AI: identifiers that may hold personal data, new outbound channels.
 
@@ -111,6 +112,7 @@ Source: [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing) and 
 | Critical | Job fails with annotations, inline comment with the fix, merge blocked | `quality-gate/<base>/critical` |
 | High | Request-changes review, merge blocked | `quality-gate/<base>/high` |
 | Medium / Low | Comment, merge allowed | — |
+| High on a line the PR only moved (#5, #7, #9) | Demoted to Medium: comment | — |
 
 `GATE_MODE=shadow` (default) only comments; `enforce` blocks. Switch to `enforce` once [EVAL.md](../EVAL.md) validates the gate. Override: a repo `admin`/`maintain` (or a member of `GATE_OVERRIDE_TEAM`) comments `/gate-override <reason>`; it applies to that commit and is recorded on the PR.
 
