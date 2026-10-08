@@ -9,7 +9,7 @@ class FakeGitHub:
     """In-memory PR: inline comments and reviews, enough for publish()."""
 
     def __init__(self):
-        self.comments, self.reviews_, self.dismissed, self.next_id = [], [], [], 100
+        self.comments, self.reviews_, self.dismissed, self.hidden, self.next_id = [], [], [], set(), 100
 
     def _id(self):
         self.next_id += 1
@@ -36,6 +36,7 @@ class FakeGitHub:
 
     def create_review(self, number, sha, event, body, comments):
         review = {"id": self._id(), "state": "CHANGES_REQUESTED" if event == "REQUEST_CHANGES" else "COMMENTED"}
+        review["node_id"] = f"PRR_{review['id']}"
         self.reviews_.append({**review, "body": body})
         self.comments += [{"id": self._id(), "body": c["body"], "line": c["line"]} for c in comments]
         return review
@@ -44,6 +45,9 @@ class FakeGitHub:
         for r in self.reviews_:
             if r["id"] == review_id:
                 r["body"] = body
+
+    def hide_as_outdated(self, node_id):
+        self.hidden.add(node_id)
 
     def dismiss_review(self, number, review_id, message):
         self.dismissed.append(review_id)
@@ -72,11 +76,12 @@ def test_regraded_or_fixed_findings_leave_no_stale_comments():
     # An old-format comment from before this change, for a finding that is still there.
     old_body = comment_body(bug("high")).replace(bug("high").fingerprint(), "0123456789ab")
     gh.comments.append({"id": 1, "body": old_body, "line": 38})
-    gh.reviews_.append({"id": 1, "state": "CHANGES_REQUESTED", "body": f"{STICKY_MARKER}\nold run"})
+    gh.reviews_.append({"id": 1, "node_id": "PRR_1", "state": "CHANGES_REQUESTED", "body": f"{STICKY_MARKER}\nold run"})
 
     run(gh, [bug("high")])
     assert len(gh.comments) == 1 and "0123456789ab" not in gh.comments[0]["body"]
     assert gh.reviews_[0]["body"] == SUPERSEDED and gh.reviews_[0]["state"] == "DISMISSED"
+    assert "PRR_1" in gh.hidden  # collapsed as outdated, not left as a visible message
     assert gh.reviews_[-1]["state"] == "CHANGES_REQUESTED"  # the PR is still blocked, by the new review
 
     # Re-graded to Medium (#13): the HIGH comment goes, a MEDIUM one replaces it, nothing blocks.
@@ -95,11 +100,29 @@ def test_old_reviews_go_even_when_no_inline_comment_changes():
     gh = FakeGitHub()
     docs = Finding("AGENTS#20", "medium", "deterministic:change_policy", "app/main.py", "Docs.", "Update docs.")
     old = f"{STICKY_MARKER}\nQuality gate review.\n\n⛔ **HIGH** · `AGENTS#20`"
-    gh.reviews_ += [{"id": 1, "state": "COMMENTED", "body": old}, {"id": 2, "state": "DISMISSED", "body": old}]
+    gh.reviews_ += [
+        {"id": 1, "node_id": "PRR_1", "state": "COMMENTED", "body": old},
+        {"id": 2, "node_id": "PRR_2", "state": "DISMISSED", "body": old},
+    ]
 
     run(gh, [docs])
     assert [r["body"] == SUPERSEDED for r in gh.reviews_] == [True, True, False]
+    assert gh.hidden == {"PRR_1", "PRR_2"}
     assert "MEDIUM" in gh.reviews_[-1]["body"]
 
     run(gh, [docs])  # nothing changed: no new review
     assert len(gh.reviews_) == 3
+
+
+def test_no_line_annotations_on_a_pr():
+    # Every workflow run's line annotations stay in "Files changed": #14 showed the same Critical 4 times.
+    from gate.__main__ import critical_annotations
+
+    leak = Finding("AGENTS#1", "critical", "deterministic:pii_flow", "app/main.py", "Name logged.", "Log the id.", 59)
+    assert critical_annotations([leak], on_pr=True) == [
+        "::error title=Quality gate::1 critical finding(s); see the PR comments."
+    ]
+    assert critical_annotations([leak], on_pr=False) == [
+        "::error file=app/main.py,line=59,title=AGENTS#1 critical::Name logged."
+    ]
+    assert critical_annotations([bug("high")], on_pr=True) == []
