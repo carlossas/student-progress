@@ -109,7 +109,7 @@ jobs:
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
       GEMINI_THINKING_LEVEL: ${{ vars.GEMINI_THINKING_LEVEL || 'LOW' }}
       GEMINI_FALLBACK_MODELS: ${{ vars.GEMINI_FALLBACK_MODELS }}
-      GEMINI_MAX_OUTPUT_TOKENS: ${{ vars.GEMINI_MAX_OUTPUT_TOKENS || '2048' }}
+      GEMINI_MAX_OUTPUT_TOKENS: ${{ vars.GEMINI_MAX_OUTPUT_TOKENS || '4096' }}
       GEMINI_MAX_INPUT_TOKENS: ${{ vars.GEMINI_MAX_INPUT_TOKENS || '30000' }}
       GATE_AI_CACHE_DIR: ${{ github.workspace }}/gate-cache
       PR_TITLE: ${{ github.event.pull_request.title }}

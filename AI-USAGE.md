@@ -25,4 +25,5 @@ I wrote the rules, the ground truth and the severity calls. Agents wrote most of
 - **Docs rule at High.** I first approved it. The live run showed it blocking the clean PR, so I moved it to Medium.
 - **Ground truth too easy.** My first version parked the two "minors' data leaves the service" cases as acceptable. I made them expected; recall dropped from 1.00 to 0.88.
 - **Bugs found only against the real APIs:** a key check closed its client before sending, temperature 0 wasn't deterministic (fixed with a seed), the token estimate was 17% low, one AI test was too strict.
+- **I trusted a cached eval.** 8/8 came from cached AI results. The first fresh run in CI said 7/8: one false block, from a severity rule for tests the model was reading two ways. I fixed the rule, and the eval now runs fresh and checks that the verdict holds when the prompt changes.
 - **The formatter rewrote a test fixture.** The tests caught it, and fixtures are now excluded from lint.

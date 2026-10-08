@@ -23,13 +23,14 @@ On Windows: `py -m venv .venv` and `.venv\Scripts\activate`. CI runs these exact
 ## Quality gate in 2 minutes
 
 ```bash
+python -m gate all                        # everything before a PR: hooks, lint, tests, both pipelines
 python -m gate check --base main          # scripts only, free
 python -m gate check --base main --ai     # + Gemini (needs GEMINI_API_KEY)
 python -m gate eval                       # score the gate on the 8 golden PRs
 npm install                               # optional: pre-commit / pre-push hooks
 ```
 
-Exit code 1 = the PR would be blocked. Critical/High block, Medium/Low comment.
+Exit code 1 = the PR would be blocked. Critical/High block, Medium/Low comment. It runs in `enforce` on `develop`; `main` doesn't have it yet.
 
 | Doc | What |
 |---|---|

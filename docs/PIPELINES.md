@@ -11,7 +11,7 @@ How the two review pipelines work, what they cost and how we keep that cost down
 
 **What it decides.** Critical and High problems block the merge; Medium and Low leave a comment. A production approver can override a block, and every override is recorded on the PR.
 
-**How well it works.** On the 8 reference PRs the gate makes the right merge call on all 8 (no false blocks, no missed blocks). Per finding: precision 1.00, recall 0.94 (17 of 18). The one miss is minors' records handed to analytics. Neither pipeline gets there alone. Details: [EVAL.md](../EVAL.md).
+**How well it works.** On the 8 reference PRs the gate makes the right merge call on all 8 (no false blocks, no missed blocks). Measured with fresh Gemini calls, and the verdict holds across 3 prompt variants. A cached run once hid a false block; the first fresh run caught it (EVAL.md). Per finding: precision 1.00, recall 0.94 (17 of 18). The one miss is minors' records handed to analytics. Neither pipeline gets there alone. Details: [EVAL.md](../EVAL.md).
 
 **What it costs.**
 
@@ -83,7 +83,7 @@ The bill has two parts: **input** (what we send: instructions + the PR) and **ou
 | Lever | What it does | Effect | Status |
 |---|---|---|---|
 | **Result cache** | A review is stored under a fingerprint of everything that shapes it (code changes, PR text, instructions, model settings). Same fingerprint → reuse, no API call. Any change → fresh review. | Re-runs of unchanged PRs cost **$0** | Done |
-| **Output cap & terse format** | Max 2,048 output tokens (was 8,192), at most 2-sentence messages, ≤ 6-line code suggestions, at most two style notes. If a review hits the cap it's retried with the cap doubled, up to 4× (8,192); only then does it fail loudly, never a half-done pass. | Bounds the expensive half of the bill; worst case per review drops ~4× | Done; cap adjustable (`GEMINI_MAX_OUTPUT_TOKENS`) once real reviews are measured |
+| **Output cap & terse format** | Max 4,096 output tokens (8,192 at first, cut to 2,048, raised to 4,096 after a review with many real problems got truncated in CI), at most 2-sentence messages, ≤ 6-line code suggestions, at most two style notes. If a review hits the cap it's retried with the cap doubled, up to 4× (8,192); only then does it fail loudly, never a half-done pass. | Bounds the expensive half of the bill; worst case per review drops ~4× | Done; cap adjustable (`GEMINI_MAX_OUTPUT_TOKENS`) once real reviews are measured |
 | **Prompt caching** | The instructions are byte-identical for every PR and sent first, followed by slow-changing repository context, so Google can bill that prefix at **10% of the input price**. | Up to ~70% off input in theory | Done, but **not observed**: 0 cached tokens in all measured runs (our prompt is likely below Google's implicit-cache minimum). Explicit caching not worth it at this volume. |
 | **Smaller instructions** | Only the rules the AI judges are sent (scripts handle the rest). | Instructions 21% smaller (≈ 3.1k → ≈ 2.4k tokens) | Done |
 | **Large PRs** | Files over 300 lines are sent as the changed parts ± 30 lines; generated files (eval results, lockfiles) are never sent; files are packed into requests of at most 30k input tokens (`GEMINI_MAX_INPUT_TOKENS`), each with its own output cap. | Cost grows with the PR instead of one oversized call that truncates. Measured in CI: the 167-file gate PR → 7 requests, 183k input tokens, 39 s, $0.14 | Done |
@@ -125,7 +125,7 @@ Source: [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing) and 
 | `GEMINI_MODEL` | variable | `gemini-3.8-flash` | Primary model |
 | `GEMINI_THINKING_LEVEL` | variable | `LOW` | Reasoning effort |
 | `GEMINI_FALLBACK_MODELS` | variable | 3.8, 3.7, 3.6 Flash | Fallback chain (keep same-price models) |
-| `GEMINI_MAX_OUTPUT_TOKENS` | variable | `2048` | Output cap per request; a truncated review is retried at 2× and 4× before failing |
+| `GEMINI_MAX_OUTPUT_TOKENS` | variable | `4096` | Output cap per request; a truncated review is retried at 2× and 4× before failing |
 | `GEMINI_MAX_INPUT_TOKENS` | variable | `30000` | Input budget per request; larger PRs are split |
 | `GATE_ACTIONS_USD_PER_MINUTE` | variable | `0.006` | Runner rate for the per-run cost line |
 | `GATE_MODE` | variable | `shadow` | `shadow` comments only, `enforce` blocks |

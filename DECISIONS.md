@@ -39,7 +39,7 @@ Critical/High = S1/S2 from TEAM-STANDARDS, nothing invented. Two calls came from
 ## ADR-4 · One Gemini call per PR, stable and cheap
 
 One structured call with temperature 0 and a fixed seed: temperature alone still flipped a High between runs. The seed only makes *identical* prompts repeat: a prompt that differed in an irrelevant way (the order of the scripts' findings) flipped `score-validation` in CI. The fix was a sharper criterion, not more randomness control: ambiguous severity rules get resolved at random. The eval now measures stability across prompt variants (`--variants`). LOW thinking and a JSON schema. Findings with an unknown rule or a line outside the diff are dropped, never posted.
-Cost is ~$0.003 per review: cache by request hash, output capped at 2k tokens, large PRs split into ≤30k-token batches.
+Cost is ~$0.003 per review: cache by request hash, output capped at 4k tokens (doubled up to 16k if a review needs it), large PRs split into ≤30k-token batches. The cap was 2k until a review with many real problems got cut off in CI.
 
 ## ADR-5 · The eval's headline is the merge verdict
 
@@ -48,22 +48,21 @@ My first eval scored only AGENTS#1-9. It said 1.00/1.00 while the live gate was 
 ## ADR-6 · Scaling past one repo
 
 Not built, but this is the order I'd do it in:
-1. **Reusable workflow + package**, versioned. Each repo only configures its PII fields and retention.
+1. **One shared gate**, versioned (backlog #1). Each repo only configures its PII fields and retention.
 2. **Bedrock instead of Gemini.** Code stays in our AWS account, access goes through IAM, no extra DPA. The client is already one interface; I'd re-run the eval before switching.
-3. **SLO + degraded mode.** Today a Gemini outage blocks every merge.
+3. **SLO + degraded mode** (backlog #4).
 4. **Cost at scale is CI, not the LLM.** 100 devs is ~900 reviews/day: ~$4/day of AI vs ~$22/day of runner minutes.
 5. **Measure in production.** Override rate, false blocks, time-to-merge. Every override becomes a fixture.
 6. **The gate is one layer.** In production: CloudWatch log data protection, Macie, PII tagged in the models.
 
-## Left out (priority order)
+## Backlog (priority order)
 
-1. CODEOWNERS on `.github/` and `gate/`.
-2. Fork PRs (no secrets → the AI job fails closed).
-3. Auto-open an incident + rotation runbook on a committed secret.
-4. Make the `eval` check required for PRs that touch `gate/ai/` (#26 merged with it red).
-
-## Backlog
-
-- **One shared gate for every service.** Move the pipeline and its tests into their own repo or package, so a fix lands everywhere at once. Version the tests, prompts and LLM settings together, and let each service pin a version and upgrade when it's ready.
-- **Tickets for what gets left behind.** When a developer merges without fixing a Medium or Low comment, open a ticket for it automatically, linked to the PR and the line. Nothing gets lost, and the merge isn't blocked.
-- **A dashboard per developer.** Which mistakes show up most, how PRs are trending, code quality over time. The point is to know where to coach, not to rank people.
+1. **One shared gate for every service.** Move the pipeline and its tests into their own repo or package, so a fix lands everywhere at once. Version the tests, prompts and LLM settings together, and let each service pin a version and upgrade when it's ready.
+2. **Make `gate-eval` a required check** on PRs that touch `gate/ai/`. #26 merged with it red because nothing stopped it.
+3. **CODEOWNERS** on `.github/` and `gate/`, so the gate can't be edited by the PR it reviews.
+4. **Degraded mode.** Today a Gemini outage blocks every merge.
+5. **Tickets for what gets left behind.** When a developer merges without fixing a Medium or Low comment, open a ticket for it automatically, linked to the PR and the line. Nothing gets lost, and the merge isn't blocked.
+6. **A dashboard per developer.** Which mistakes show up most, how PRs are trending, code quality over time. The point is to know where to coach, not to rank people.
+7. **Fork PRs.** They get no secrets, so the AI job fails closed and the report can't comment.
+8. **Secret incident flow.** A committed secret should open an incident with the rotation steps, not just block.
+9. **The last known miss** (`fn-pr7-minors-to-analytics` in EVAL.md): a fixture where minimization is fine but the data goes to a third party.

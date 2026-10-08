@@ -74,9 +74,9 @@ def test_ai_result_cache_keyed_by_the_request(tmp_path):
 
 def test_output_cap_is_configurable_and_truncation_fails_loudly(monkeypatch):
     monkeypatch.delenv("GEMINI_MAX_OUTPUT_TOKENS", raising=False)
-    assert GeminiSettings.from_env(require_key=False).max_output_tokens == DEFAULT_MAX_OUTPUT_TOKENS == 2048
-    monkeypatch.setenv("GEMINI_MAX_OUTPUT_TOKENS", "4096")
-    assert GeminiSettings.from_env(require_key=False).max_output_tokens == 4096
+    assert GeminiSettings.from_env(require_key=False).max_output_tokens == DEFAULT_MAX_OUTPUT_TOKENS == 4096
+    monkeypatch.setenv("GEMINI_MAX_OUTPUT_TOKENS", "8192")
+    assert GeminiSettings.from_env(require_key=False).max_output_tokens == 8192
 
     client = GeminiClient(SETTINGS)
     truncated = SimpleNamespace(
@@ -94,14 +94,14 @@ def test_output_cap_is_configurable_and_truncation_fails_loudly(monkeypatch):
     monkeypatch.setattr(client._client.models, "generate_content", always_truncated)
     with pytest.raises(OutputTruncated, match="GEMINI_MAX_OUTPUT_TOKENS"):
         client.generate_json("system", "prompt", {"type": "object"})
-    assert caps == [2048, 4096, 8192]
+    assert caps == [4096, 8192, 16384]
 
 
 def test_truncated_review_is_retried_with_a_bigger_cap(monkeypatch):
     # R02 AI test, 2026-10-08: a PR with many real problems hit 2048 and failed the gate.
     client = GeminiClient(SETTINGS)
     meta = SimpleNamespace(
-        prompt_token_count=4000, cached_content_token_count=0, candidates_token_count=2048, thoughts_token_count=0
+        prompt_token_count=4000, cached_content_token_count=0, candidates_token_count=4096, thoughts_token_count=0
     )
     truncated = SimpleNamespace(
         text='{"findings": [', usage_metadata=meta, candidates=[SimpleNamespace(finish_reason="MAX_TOKENS")]
@@ -117,8 +117,8 @@ def test_truncated_review_is_retried_with_a_bigger_cap(monkeypatch):
 
     monkeypatch.setattr(client._client.models, "generate_content", truncated_once)
     text, model, usage = client.generate_json("system", "prompt", {"type": "object"})
-    assert (text, caps) == ('{"findings": []}', [2048, 4096])
-    assert (usage.calls, usage.output_tokens) == (2, 4096)  # the truncated try is billed too
+    assert (text, caps) == ('{"findings": []}', [4096, 8192])
+    assert (usage.calls, usage.output_tokens) == (2, 8192)  # the truncated try is billed too
 
 
 def test_system_prompt_is_stable_and_shrunk(tmp_path):

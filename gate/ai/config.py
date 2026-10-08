@@ -6,7 +6,7 @@
 | GEMINI_MODEL               | repo variable            | gemini-3.8-flash   |
 | GEMINI_THINKING_LEVEL      | repo variable            | LOW                |
 | GEMINI_FALLBACK_MODELS     | repo variable (csv)      | see FALLBACK       |
-| GEMINI_MAX_OUTPUT_TOKENS   | repo variable            | 2048               |
+| GEMINI_MAX_OUTPUT_TOKENS   | repo variable            | 4096               |
 | GEMINI_MAX_INPUT_TOKENS    | repo variable            | 30000              |
 """
 
@@ -29,11 +29,11 @@ TEMPERATURE = 0.0
 SEED = 20261007
 
 # Output (and thinking) bills at 5x the input rate, so the cap is the main cost lever.
-# 2048 fits ~10 terse findings, which covers almost every PR. A review that hits the cap is
-# retried with the cap doubled, up to OUTPUT_ESCALATION x the cap (8192 by default): a PR with
-# many real problems costs a bit more instead of failing the gate (seen on the R02 AI test,
-# 2026-10-08). Only a review that still truncates at the ceiling fails, loudly.
-DEFAULT_MAX_OUTPUT_TOKENS = 2048
+# 4096 (raised from 2048 after the R02 AI test truncated in CI, 2026-10-08). The cap only bills
+# what the model actually writes, so a higher cap costs nothing on normal PRs. A review that hits
+# it is retried with the cap doubled, up to OUTPUT_ESCALATION x the cap (16384); only a review
+# that still truncates at the ceiling fails, loudly.
+DEFAULT_MAX_OUTPUT_TOKENS = 4096
 OUTPUT_ESCALATION = 4
 # Input budget per request. A larger PR is split into several requests (one output cap each),
 # so cost grows with the PR instead of one huge call that truncates. Typical PRs use ~4k.

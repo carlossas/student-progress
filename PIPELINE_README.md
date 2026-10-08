@@ -37,13 +37,13 @@ Runs pre-commit checks, lint, tests + coverage, the script pipeline, and the AI 
 | Goal | Command |
 |---|---|
 | Both pipelines on committed changes | `python -m gate check --base main [--ai]` |
-| Score the gate on the golden PRs | `python -m gate eval [--ai] [--reuse-ai] [--write]` |
+| Score the gate on the golden PRs | `python -m gate eval [--ai] [--write]`. `--variants 3` checks the verdict holds when the prompt changes. `--reuse-ai` is cached: don't trust it for numbers. |
 | AI tests (cost credits) | `pytest -m ai` |
 
 ## On GitHub
 
 One-time setup:
-1. Secret `GEMINI_API_KEY`. Variable `GATE_MODE`: `shadow` (comment only, the default) or `enforce`.
+1. Secret `GEMINI_API_KEY`. Variable `GATE_MODE`: `shadow` (comment only, the default) or `enforce`. This repo runs `enforce`.
 2. `bash gate/setup/branch_protection.sh`: requires that branch's `quality-gate/<base>/critical` and `quality-gate/<base>/high` (e.g. `quality-gate/develop/critical`), plus 1 review, on `develop`/`main`.
 
 Every PR gets:
@@ -74,5 +74,5 @@ Formula: devs × PRs/day × runs/PR × days × $/run. At org scale, runner minut
 | `python` opens the Microsoft Store | Use `py` or the scripts |
 | Hooks don't run | `npm install` again |
 | AI step skipped | Key missing or invalid; the script checks still ran |
-| `hit the output cap` (already retried up to 4×) | Raise `GEMINI_MAX_OUTPUT_TOKENS` |
+| `hit the output cap` (already retried up to 16k tokens) | Raise `GEMINI_MAX_OUTPUT_TOKENS` (default 4096) |
 | Coverage fails with no failing test | Your changed lines aren't covered; the finding lists them |

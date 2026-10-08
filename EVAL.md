@@ -19,7 +19,7 @@ What I measure:
 | `analytics-archive` | block | Critical #3: no retention · Critical #4: not minimized · Critical #2: minors' records to analytics · High #6 |
 | `progress-percentage` | block | High #9: `int()` truncates, empty catalog = 100% |
 
-I changed the truth twice after seeing results. Every change is in the YAML with the reason. Two of them lowered my own numbers (the two #2 minors cases).
+I changed the truth in two passes after seeing results. Every change is in the YAML with the reason. Two of them lowered my own numbers (the two #2 minors cases).
 
 ## Results
 
@@ -105,9 +105,13 @@ Verdict flips: **0/8 PRs**. Right merge call per run: 8/8, 8/8, 8/8.
 **Why:** It's scaffolding: nothing calls SendGrid yet, so the outbound script had nothing to match. The AI judged the code that exists, not what the module is for.
 **Change:** A script, not a prompt (`gate/deterministic/vendor_channel.py`, A18). A changed module that names a known vendor and has a function handling a personal field gets High #2, unless the PR says `Legal basis: ...`. It stays quiet when the module already calls the vendor (pii_flow follows that data) or only handles `student_id`. Recall 0.88 → 0.94, still 0 FP and 8/8 verdicts. I picked a script because it's free, can't drift with the model, and doesn't need another prompt change measured across variants.
 
-### fn-pr7-minors-to-analytics
+### fn-pr7-minors-to-analytics (open)
 **Why:** The PR is already blocked for retention and minimization, and the AI's fix covers this too. The model folds "data goes to analytics" into "too many fields".
-**Change:** Add a fixture where minimization is fine but the destination is a third party, so #2 has to show up on its own.
+**Change:** Not done yet. Next is a fixture where minimization is fine but the data goes to a third party, so #2 has to show up on its own (DECISIONS.md backlog #9).
+
+### ci-r02-output-truncated (fixed)
+**Why:** After the B8 change, `gate-eval` on PR #26 failed: the R02 AI test (several minors' data leaks in one fixture) hit the 2048-token output cap, which is a gate error and blocks. #26 was merged anyway, because `eval` isn't a required check. In production the same thing would block any PR with many real problems.
+**Change:** The cap went from 2048 to 4096 (it only bills what the model writes, so normal PRs don't pay more), and a truncated review is retried with the cap doubled, up to 16384. The truncated try is billed in the run's cost. It only fails if it still truncates at the ceiling (`test_truncated_review_is_retried_with_a_bigger_cap`). Next: make `gate-eval` required for PRs that touch `gate/ai/`.
 
 ### fp-live-pr12-docs-rule (fixed)
 **Why:** On GitHub, [PR #12](https://github.com/carlossas/student-progress/pull/12) (pagination, the clean PR) was blocked by "docs not updated" (High). The eval showed "pass" because process rules were out of scope. I made a rule that isn't in TEAM-STANDARDS blocking, and built an eval that couldn't see it.
@@ -133,8 +137,5 @@ Tripwires once it runs on real PRs:
 
 Prompt injection: the script check (A17) has unit tests, and `tests/gate/ai/test_injection_resistance_ai.py` passes in CI. It checks that the model still reports a minor's email in a log when the PR tells it not to. Not tested: PRs from forks.
 
-### ci-r02-output-truncated (fixed)
-**Why:** After the B8 change, `gate-eval` on PR #26 failed: the R02 AI test (several minors' data leaks in one fixture) hit the 2048-token output cap, which is a gate error and blocks. #26 was merged anyway, because `eval` isn't a required check. In production the same thing would block any PR with many real problems.
-**Change:** A truncated review is retried with the cap doubled, up to 4x (8192), and the truncated try is billed in the run's cost. It only fails if it still truncates at the ceiling (`test_truncated_review_is_retried_with_a_bigger_cap`). Next: make `eval` required for PRs that touch `gate/ai/`.
 
 Golden PRs are pinned to a commit (`head:` in the YAML). `support-context` had `develop` merged into it through "Update branch" on PR #10. Its diff turned into the whole gate, and the eval quietly lost a true positive until I pinned it.

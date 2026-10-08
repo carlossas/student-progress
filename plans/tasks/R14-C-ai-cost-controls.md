@@ -4,7 +4,7 @@
 
 ## Scope
 - **C1 Result cache:** `review()` keys each review by a SHA-256 of the full request and model settings; `python -m gate ai --key-only` prints the key without an API key; the `ai` job restores/saves `gate-cache/` with `actions/cache`. Only well-formed answers are cached.
-- **C2 Output cap:** `GEMINI_MAX_OUTPUT_TOKENS` (default 2048); `MAX_TOKENS` finish reason raises `OutputTruncated` (blocking gate error with a hint to raise the cap). Terse-format instructions in `prompts/system.md`.
+- **C2 Output cap:** `GEMINI_MAX_OUTPUT_TOKENS` (default 4096; retried at 2× and 4×); `MAX_TOKENS` finish reason raises `OutputTruncated` (blocking gate error with a hint to raise the cap). Terse-format instructions in `prompts/system.md`.
 - **C3 Prompt caching:** byte-identical system prompt; repository context before PR content; cached tokens priced at 10% of input; the run summary shows cached tokens.
 - **C4 Smaller system prompt:** `agents_excerpt()` sends only rules 1–6, 20, 21 and the personal-data field table.
 
@@ -15,7 +15,7 @@
 ## Test
 `tests/gate/deterministic/test_ai_cost_controls.py` (offline: fake client, no Gemini calls). Four test functions, one per control:
 - **C1** same request twice → 1 API call, second served from cache at $0; a different diff, thinking level or PR description → new call; malformed answer → error and nothing cached.
-- **C2** cap defaults to 2048 and follows `GEMINI_MAX_OUTPUT_TOKENS`; a `MAX_TOKENS` response raises `OutputTruncated` naming the variable.
+- **C2** cap defaults to 4096 and follows `GEMINI_MAX_OUTPUT_TOKENS`; a `MAX_TOKENS` response raises `OutputTruncated` naming the variable.
 - **C3/C4** excerpt contains exactly rules {1–6, 20, 21} and the field table, is < 75% of AGENTS.md; system prompt identical across PRs; `<repository_context>` precedes `<pull_request>`.
 - **Pricing** cached input billed at 10%; savings reported.
 - **C5** a 1,000-line file is sent as its changed hunk with gaps marked; `eval/results/` and `package-lock.json` are not sent; 8 files under a 9k budget become several requests, each under budget; one API call per request, duplicate findings merged, a second run fully cached; a small PR stays a single request.
