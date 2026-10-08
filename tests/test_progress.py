@@ -22,6 +22,14 @@ def test_progress_percentage():
     assert body["percentage"] == 60
 
 
+def test_progress_percentage_no_lessons(monkeypatch):
+    from app import store
+
+    monkeypatch.setattr(store, "LESSONS", [])
+    body = client.get("/students/s-003/progress").json()
+    assert body["percentage"] == 100
+
+
 def test_unknown_student_404():
     assert client.get("/students/nope/progress").status_code == 404
 
