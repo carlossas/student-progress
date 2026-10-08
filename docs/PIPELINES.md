@@ -109,8 +109,8 @@ Source: [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing) and 
 
 | Severity | PR effect | Required check |
 |---|---|---|
-| Critical | Job fails with annotations, inline comment with the fix, merge blocked | `quality-gate/critical` |
-| High | Request-changes review, merge blocked | `quality-gate/high` |
+| Critical | Job fails with annotations, inline comment with the fix, merge blocked | `quality-gate/<base>/critical` |
+| High | Request-changes review, merge blocked | `quality-gate/<base>/high` |
 | Medium / Low | Comment, merge allowed | — |
 | High on a line the PR only moved (#5, #7, #9) | Demoted to Medium: comment | — |
 

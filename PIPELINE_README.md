@@ -44,7 +44,7 @@ Runs pre-commit checks, lint, tests + coverage, the script pipeline, and the AI 
 
 One-time setup:
 1. Secret `GEMINI_API_KEY`. Variable `GATE_MODE`: `shadow` (comment only, the default) or `enforce`.
-2. `bash gate/setup/branch_protection.sh`: requires `quality-gate/critical`, `quality-gate/high` and 1 review on `develop`/`main`.
+2. `bash gate/setup/branch_protection.sh`: requires that branch's `quality-gate/<base>/critical` and `quality-gate/<base>/high` (e.g. `quality-gate/develop/critical`), plus 1 review, on `develop`/`main`.
 
 Every PR gets:
 - A summary comment with every finding and the run's cost.

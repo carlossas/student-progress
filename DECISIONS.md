@@ -13,6 +13,7 @@ Trade-off: we maintain our own patterns.
 Prompts, config and rules come from the base branch, so a PR can't loosen its own review. Only the AI job has the API key, and it only reads files.
 - **Secrets are masked** before anything goes to Gemini (`mask_secrets`). The model doesn't need the value, and Gemini is a third party.
 - **Prompt injection** gets two layers. The system prompt treats PR text as data, and a script (A17) flags text aimed at the reviewer (telling it to drop its rules or return an empty review) as High. The script doesn't depend on the model it protects.
+Compatibility: the workflow comes from the PR but the gate code from the base, so new inputs go in env vars and never as new CLI flags. PR #21's new flag crashed `develop`'s older gate.
 Gap: on `pull_request` a PR can edit the workflow file. Today `workflow_policy` flags that edit; the real fix is CODEOWNERS (backlog).
 
 ## ADR-3 · What blocks
@@ -24,6 +25,8 @@ Gap: on `pull_request` a PR can edit the workflow file. Today `workflow_policy` 
 | High on a moved line (#5/#7/#9) | Demoted to Medium |
 | Medium / Low, process rules (#16/#18/#20) | Comment only |
 | Gate crash / Gemini error | Blocks, never a silent pass |
+
+The checks are named per base branch (`quality-gate/<base>/critical`, `.../high`). A status belongs to a commit, so one branch with PRs into `develop` and `main` used to overwrite its own checks.
 
 Critical/High = S1/S2 from TEAM-STANDARDS, nothing invented. Two calls came from measuring:
 - **Docs rule doesn't block.** It blocked the only clean PR, and it isn't a team standard.

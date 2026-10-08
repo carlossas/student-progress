@@ -184,7 +184,8 @@ def cmd_report(args) -> int:
     needs = json.loads(args.needs) if args.needs else {}
     findings, errors, extra = _collect(source, needs)
     extra.append(f"<sub>{render(_run_cost(source, args.publish))}</sub>")
-    decision = decide(findings, mode=args.mode, gate_errors=errors)
+    base = args.base_ref or os.environ.get("GITHUB_BASE_REF", "") or "develop"
+    decision = decide(findings, mode=args.mode, gate_errors=errors, base=base)
     run_url = os.environ.get("GITHUB_RUN_URL")
     summary = render_summary(
         findings, decision, args.mode, extra + ([f"<sub>[Run logs]({run_url})</sub>"] if run_url else [])
@@ -335,6 +336,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--in", dest="inputs", default="gate-out")
     p.add_argument("--mode", default=os.environ.get("GATE_MODE") or "shadow", choices=["enforce", "shadow"])
     p.add_argument("--needs", default="", help="toJSON(needs) from the workflow")
+    p.add_argument(
+        "--base-ref", default="", help="the PR's base branch; names the status checks (default: $GITHUB_BASE_REF)"
+    )
     p.add_argument("--publish", action="store_true")
     p.add_argument("--pr", type=int)
     p.add_argument("--sha")

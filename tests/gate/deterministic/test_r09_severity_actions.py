@@ -1,6 +1,5 @@
 import pytest
 
-from gate.config import STATUS_CRITICAL, STATUS_HIGH
 from gate.report.actions import decide
 from gate.report.finding import Finding
 
@@ -23,10 +22,15 @@ def test_r09_severity_actions(severity):
     exit_code, critical, high, event, inline = EXPECTED[severity]
 
     # Violation input: one finding of this severity.
-    decision = decide([finding(severity)], mode="enforce")
+    decision = decide([finding(severity)], mode="enforce", base="develop")
     assert decision.exit_code == exit_code
-    assert decision.statuses[STATUS_CRITICAL][0] == critical
-    assert decision.statuses[STATUS_HIGH][0] == high
+    assert decision.statuses["quality-gate/develop/critical"][0] == critical
+    assert decision.statuses["quality-gate/develop/high"][0] == high
+    # Checks are named per base branch: the same commit heading a PR into main gets its own pair.
+    assert set(decide([finding(severity)], base="main").statuses) == {
+        "quality-gate/main/critical",
+        "quality-gate/main/high",
+    }
     assert decision.review_event == event
     assert (decision.inline != []) is inline
     assert (decision.summary_only != []) is (not inline)

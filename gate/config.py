@@ -38,8 +38,16 @@ SECRET_ALLOWLIST = CONFIG_DIR / "secret-allowlist.txt"
 RULE_MAP = CONFIG_DIR / "rule_map.yml"
 AGENTS_MD = GATE_ROOT / "AGENTS.md"
 
-STATUS_CRITICAL = "quality-gate/critical"
-STATUS_HIGH = "quality-gate/high"
+
+def status_contexts(base: str) -> tuple[str, str]:
+    """(critical, high) commit-status names for PRs into `base`.
+
+    Per base branch because a status belongs to a commit, not a PR: when one branch heads PRs
+    into develop and main, each review must land on its own pair of checks.
+    """
+    if not base:
+        raise ValueError("the PR's base branch is required to name its status checks")
+    return f"quality-gate/{base}/critical", f"quality-gate/{base}/high"
 
 
 def valid_rules(agents_md: Path = AGENTS_MD) -> frozenset[str]:
