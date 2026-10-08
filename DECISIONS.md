@@ -16,6 +16,8 @@ Prompts, config and rules come from the base branch, so a PR can't loosen its ow
 Compatibility: the workflow comes from the PR but the gate code from the base, so new inputs go in env vars and never as new CLI flags. PR #21's new flag crashed `develop`'s older gate.
 Gap: on `pull_request` a PR can edit the workflow file. Today `workflow_policy` flags that edit; the real fix is CODEOWNERS (backlog).
 
+**Current base, not the event's.** The gate is checked out from the base branch's current tip (`github.base_ref`) and diffs against the first parent of the PR's merge commit. `github.event.pull_request.base.sha` is stale on reopened and older PRs: a reopen on PR #12 ran a gate from before #19–#22, with old check names and severities.
+
 ## ADR-3 · What blocks
 
 | Finding | Effect |
