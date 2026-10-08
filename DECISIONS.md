@@ -51,7 +51,7 @@ Not built, but this is the order I'd do it in:
 1. **One shared gate**, versioned (backlog #1). Each repo only configures its PII fields and retention.
 2. **Bedrock instead of Gemini.** Code stays in our AWS account, access goes through IAM, no extra DPA. The client is already one interface; I'd re-run the eval before switching.
 3. **SLO + degraded mode** (backlog #4).
-4. **Cost at scale is CI, not the LLM.** 100 devs is ~900 runs/day: ~$4/day of AI vs ~$22/day of runner minutes, most of it per-job rounding. Fewer, merged jobs come first (backlog #10).
+4. **Cost at scale is CI, not the LLM.** 100 devs is ~900 runs/day: ~$4/day of AI vs ~$22/day of runner minutes. How to cut that: backlog #10.
 5. **Measure in production.** Override rate, false blocks, time-to-merge. Every override becomes a fixture.
 6. **The gate is one layer.** In production: CloudWatch log data protection, Macie, PII tagged in the models.
 
