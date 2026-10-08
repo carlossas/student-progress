@@ -59,6 +59,5 @@ Not built, but this is the order I'd do it in:
 
 1. CODEOWNERS on `.github/` and `gate/`.
 2. Fork PRs (no secrets → the AI job fails closed).
-3. Vendor-credential signal for the SendGrid FN.
-4. Auto-open an incident + rotation runbook on a committed secret.
-5. Run the injection AI test (`pytest -m ai`) in CI; it needs the key.
+3. Auto-open an incident + rotation runbook on a committed secret.
+4. Make the `eval` check required for PRs that touch `gate/ai/` (#26 merged with it red).

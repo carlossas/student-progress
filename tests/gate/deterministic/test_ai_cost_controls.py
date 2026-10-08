@@ -84,16 +84,41 @@ def test_output_cap_is_configurable_and_truncation_fails_loudly(monkeypatch):
         usage_metadata=None,
         candidates=[SimpleNamespace(finish_reason="FinishReason.MAX_TOKENS")],
     )
-    seen = {}
+    caps = []
 
-    def fake_generate(model, contents, config):
-        seen["max"] = config.max_output_tokens
+    def always_truncated(model, contents, config):
+        caps.append(config.max_output_tokens)
         return truncated
 
-    monkeypatch.setattr(client._client.models, "generate_content", fake_generate)
+    # Doubles the cap up to 4x before giving up, then fails loudly (never a truncated pass).
+    monkeypatch.setattr(client._client.models, "generate_content", always_truncated)
     with pytest.raises(OutputTruncated, match="GEMINI_MAX_OUTPUT_TOKENS"):
         client.generate_json("system", "prompt", {"type": "object"})
-    assert seen["max"] == 2048
+    assert caps == [2048, 4096, 8192]
+
+
+def test_truncated_review_is_retried_with_a_bigger_cap(monkeypatch):
+    # R02 AI test, 2026-10-08: a PR with many real problems hit 2048 and failed the gate.
+    client = GeminiClient(SETTINGS)
+    meta = SimpleNamespace(
+        prompt_token_count=4000, cached_content_token_count=0, candidates_token_count=2048, thoughts_token_count=0
+    )
+    truncated = SimpleNamespace(
+        text='{"findings": [', usage_metadata=meta, candidates=[SimpleNamespace(finish_reason="MAX_TOKENS")]
+    )
+    complete = SimpleNamespace(
+        text='{"findings": []}', usage_metadata=meta, candidates=[SimpleNamespace(finish_reason="STOP")]
+    )
+    caps = []
+
+    def truncated_once(model, contents, config):
+        caps.append(config.max_output_tokens)
+        return truncated if len(caps) == 1 else complete
+
+    monkeypatch.setattr(client._client.models, "generate_content", truncated_once)
+    text, model, usage = client.generate_json("system", "prompt", {"type": "object"})
+    assert (text, caps) == ('{"findings": []}', [2048, 4096])
+    assert (usage.calls, usage.output_tokens) == (2, 4096)  # the truncated try is billed too
 
 
 def test_system_prompt_is_stable_and_shrunk(tmp_path):

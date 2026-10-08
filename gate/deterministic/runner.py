@@ -19,6 +19,7 @@ from gate.deterministic import (
     tests_runner,
     todo_ticket,
     validation,
+    vendor_channel,
     workflow_policy,
 )
 from gate.diff import DiffContext
@@ -38,6 +39,7 @@ FAST: dict[str, Callable[[DiffContext], list[Finding]]] = {
     "lint": lint.check,
     "todo": todo_ticket.check,
     "prompt_injection": prompt_injection.check,
+    "vendor_channel": vendor_channel.check,
 }
 POLICY: dict[str, Callable[[DiffContext], list[Finding]]] = {
     "tests_touched": change_policy.tests_touched,

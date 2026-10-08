@@ -20,6 +20,16 @@
     "check": "P2"
   },
   {
+    "rule": "AGENTS#2",
+    "severity": "high",
+    "source": "deterministic:vendor_channel",
+    "file": "app/notifications.py",
+    "message": "`send_inactivity_reminder` prepares personal data (`email`) for sendgrid, a third party. For minors that data can't leave the service without minimization and a documented legal basis.",
+    "suggestion": "Pass `student_id` and resolve the contact inside the service; for minors use the guardian's contact with verifiable parental consent (COPPA) or skip them. Then add `Legal basis: ...` to the PR description.",
+    "line": 11,
+    "check": "A18"
+  },
+  {
     "rule": "AGENTS#6",
     "severity": "high",
     "source": "deterministic:change_policy",

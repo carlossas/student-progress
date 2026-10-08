@@ -74,5 +74,5 @@ Formula: devs × PRs/day × runs/PR × days × $/run. At org scale, runner minut
 | `python` opens the Microsoft Store | Use `py` or the scripts |
 | Hooks don't run | `npm install` again |
 | AI step skipped | Key missing or invalid; the script checks still ran |
-| `hit the output cap` | Raise `GEMINI_MAX_OUTPUT_TOKENS` |
+| `hit the output cap` (already retried up to 4×) | Raise `GEMINI_MAX_OUTPUT_TOKENS` |
 | Coverage fails with no failing test | Your changed lines aren't covered; the finding lists them |

@@ -29,9 +29,12 @@ TEMPERATURE = 0.0
 SEED = 20261007
 
 # Output (and thinking) bills at 5x the input rate, so the cap is the main cost lever.
-# 2048 fits ~10 terse findings. A review that hits the cap fails loudly (never a truncated
-# pass); raise GEMINI_MAX_OUTPUT_TOKENS if the eval shows real reviews need more.
+# 2048 fits ~10 terse findings, which covers almost every PR. A review that hits the cap is
+# retried with the cap doubled, up to OUTPUT_ESCALATION x the cap (8192 by default): a PR with
+# many real problems costs a bit more instead of failing the gate (seen on the R02 AI test,
+# 2026-10-08). Only a review that still truncates at the ceiling fails, loudly.
 DEFAULT_MAX_OUTPUT_TOKENS = 2048
+OUTPUT_ESCALATION = 4
 # Input budget per request. A larger PR is split into several requests (one output cap each),
 # so cost grows with the PR instead of one huge call that truncates. Typical PRs use ~4k.
 DEFAULT_MAX_INPUT_TOKENS = 30_000
