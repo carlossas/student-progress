@@ -1,0 +1,1 @@
+{"title": "Push daily completion totals to the support dashboard", "body": "Purpose: the support dashboard shows how many lessons were completed per day.\nData sent: one aggregated integer per day. No student identifiers or personal data leave the service, so no minors' data is shared.\nLegal basis: legitimate interest (service operation), reviewed by the DPO in LEGAL-42."}

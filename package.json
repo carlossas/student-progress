@@ -1,0 +1,11 @@
+{
+  "name": "student-progress-hooks",
+  "private": true,
+  "description": "Git hooks only (husky): runs the quality gate's deterministic checks before commit/push. The service itself is Python.",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "9.1.7"
+  }
+}

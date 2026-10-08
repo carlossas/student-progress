@@ -1,0 +1,9 @@
+# Lint policy applied by the gate to changed files (AGENTS#5, #7).
+# Lives in the gate so a PR cannot relax the rules it is judged by.
+line-length = 120
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "B", "BLE001", "S110"]
+# Line length is enforced by `ruff format`; long message strings are not worth splitting.
+ignore = ["E501"]

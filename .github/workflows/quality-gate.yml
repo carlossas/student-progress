@@ -1,0 +1,214 @@
+name: quality-gate
+
+# Every PR goes through the gate (AGENTS#15): no path filters, no skip labels.
+# The required checks on develop/main are the commit statuses `quality-gate/<base>/critical` and
+# `quality-gate/<base>/high` set by the `report` job, one pair per base branch, because a commit
+# can head PRs into several branches (see gate/setup/branch_protection.sh).
+#
+# The gate code comes from the CURRENT tip of the base branch (github.base_ref), and the diff
+# base is the first parent of the PR's merge commit: github.event.pull_request.base.sha is
+# stale on reopened/older PRs (seen live: a reopen ran a gate from before #19-#22).
+#
+# This file runs from the PR, the gate code from the base branch: pass new inputs through
+# environment variables GitHub already sets (e.g. GITHUB_BASE_REF), never new CLI flags, so an
+# older gate on the base branch keeps working (DECISIONS.md, ADR-2).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # Pipeline A: scripts and linters. Runs the PR's tests, so it never sees the Gemini key.
+  deterministic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout PR (merge result)
+        uses: actions/checkout@v4
+        with:
+          path: pr
+          fetch-depth: 0
+      - name: Checkout gate from the base branch (a PR cannot change the rules it is judged by)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+          path: gate-src
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Base commit = first parent of the PR's merge commit (the base branch as merged now)
+        run: echo "BASE_SHA=$(git -C pr rev-parse HEAD^1)" >> "$GITHUB_ENV"
+      - name: Select gate source (base branch; the PR's own gate only when the base has none yet)
+        run: |
+          if [ -f gate-src/gate/__main__.py ]; then echo "GATE_HOME=$GITHUB_WORKSPACE/gate-src" >> "$GITHUB_ENV"
+          else echo "::warning::Base branch has no quality gate yet; running the gate from this PR (bootstrap)."
+               echo "GATE_HOME=$GITHUB_WORKSPACE/pr" >> "$GITHUB_ENV"; fi
+      - name: Install
+        run: pip install -r "$GATE_HOME/requirements-gate.txt" -r pr/requirements.txt
+      - name: Pipeline A (deterministic)
+        working-directory: ${{ env.GATE_HOME }}
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: python -m gate deterministic --repo "$GITHUB_WORKSPACE/pr" --base "$BASE_SHA" --out "$GITHUB_WORKSPACE/gate-out"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gate-deterministic
+          path: gate-out/*.json
+          if-no-files-found: ignore
+
+  # A15: a new developer can follow the README on a clean machine.
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: pr
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+          path: gate-src
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Select gate source (base branch; the PR's own gate only when the base has none yet)
+        run: |
+          if [ -f gate-src/gate/__main__.py ]; then echo "GATE_HOME=$GITHUB_WORKSPACE/gate-src" >> "$GITHUB_ENV"
+          else echo "::warning::Base branch has no quality gate yet; running the gate from this PR (bootstrap)."
+               echo "GATE_HOME=$GITHUB_WORKSPACE/pr" >> "$GITHUB_ENV"; fi
+      - name: README smoke test
+        working-directory: ${{ env.GATE_HOME }}
+        run: python -m gate smoke --repo "$GITHUB_WORKSPACE/pr" --out "$GITHUB_WORKSPACE/gate-out"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gate-smoke
+          path: gate-out/*.json
+          if-no-files-found: ignore
+
+  # Pipeline B: Gemini review. Only PRs into develop/main (cost). Runs even if A failed.
+  # Never executes PR code: it only reads it.
+  ai:
+    needs: deterministic
+    if: ${{ always() && (github.base_ref == 'main' || github.base_ref == 'develop') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Everything that shapes the answer is part of the cache key, so it is set job-wide.
+    env:
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
+      GEMINI_THINKING_LEVEL: ${{ vars.GEMINI_THINKING_LEVEL || 'LOW' }}
+      GEMINI_FALLBACK_MODELS: ${{ vars.GEMINI_FALLBACK_MODELS }}
+      GEMINI_MAX_OUTPUT_TOKENS: ${{ vars.GEMINI_MAX_OUTPUT_TOKENS || '4096' }}
+      GEMINI_MAX_INPUT_TOKENS: ${{ vars.GEMINI_MAX_INPUT_TOKENS || '30000' }}
+      GATE_AI_CACHE_DIR: ${{ github.workspace }}/gate-cache
+      PR_TITLE: ${{ github.event.pull_request.title }}
+      PR_BODY: ${{ github.event.pull_request.body }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: pr
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+          path: gate-src
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Base commit = first parent of the PR's merge commit (the base branch as merged now)
+        run: echo "BASE_SHA=$(git -C pr rev-parse HEAD^1)" >> "$GITHUB_ENV"
+      - name: Select gate source (base branch; the PR's own gate only when the base has none yet)
+        run: |
+          if [ -f gate-src/gate/__main__.py ]; then echo "GATE_HOME=$GITHUB_WORKSPACE/gate-src" >> "$GITHUB_ENV"
+          else echo "::warning::Base branch has no quality gate yet; running the gate from this PR (bootstrap)."
+               echo "GATE_HOME=$GITHUB_WORKSPACE/pr" >> "$GITHUB_ENV"; fi
+      - name: Install
+        run: pip install -r "$GATE_HOME/requirements-gate.txt"
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: gate-deterministic
+          path: gate-in
+      # Cost: an unchanged review (same diff, PR text, prompts and settings) is served from cache.
+      - name: AI cache key
+        id: key
+        working-directory: ${{ env.GATE_HOME }}
+        run: echo "key=$(python -m gate ai --key-only --repo "$GITHUB_WORKSPACE/pr" --base "$BASE_SHA" --in "$GITHUB_WORKSPACE/gate-in")" >> "$GITHUB_OUTPUT"
+      - name: Restore AI cache
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: gate-cache
+          key: gate-ai-${{ steps.key.outputs.key }}
+      - name: Pipeline B (Gemini)
+        working-directory: ${{ env.GATE_HOME }}
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python -m gate ai --repo "$GITHUB_WORKSPACE/pr" --base "$BASE_SHA" --in "$GITHUB_WORKSPACE/gate-in" --out "$GITHUB_WORKSPACE/gate-out"
+      - name: Save AI cache
+        if: ${{ steps.cache.outputs.cache-hit != 'true' && hashFiles('gate-cache/*.json') != '' }}
+        uses: actions/cache/save@v4
+        with:
+          path: gate-cache
+          key: gate-ai-${{ steps.key.outputs.key }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gate-ai
+          path: gate-out/*.json
+          if-no-files-found: ignore
+
+  # Merges both pipelines, applies the severity policy (AGENTS#9), comments and sets statuses.
+  report:
+    needs: [deterministic, smoke, ai]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+      statuses: write
+      actions: read  # job timings for the per-run cost line
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: pr
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+          path: gate-src
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Select gate source (base branch; the PR's own gate only when the base has none yet)
+        run: |
+          if [ -f gate-src/gate/__main__.py ]; then echo "GATE_HOME=$GITHUB_WORKSPACE/gate-src" >> "$GITHUB_ENV"
+          else echo "::warning::Base branch has no quality gate yet; running the gate from this PR (bootstrap)."
+               echo "GATE_HOME=$GITHUB_WORKSPACE/pr" >> "$GITHUB_ENV"; fi
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: gate-*
+          merge-multiple: true
+          path: gate-out
+      - name: Report (findings, statuses, comments, per-run cost)
+        working-directory: ${{ env.GATE_HOME }}
+        env:
+          GATE_ACTIONS_USD_PER_MINUTE: ${{ vars.GATE_ACTIONS_USD_PER_MINUTE || '0.006' }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GATE_MODE: ${{ vars.GATE_MODE || 'shadow' }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: >-
+          python -m gate report --in "$GITHUB_WORKSPACE/gate-out" --mode "$GATE_MODE" --needs "$NEEDS_JSON"
+          --publish --pr ${{ github.event.pull_request.number }} --sha ${{ github.event.pull_request.head.sha }}

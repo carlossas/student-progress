@@ -1,0 +1,141 @@
+# Ground truth for the 8 golden PRs (AGENTS#12).
+# Written from reading each diff against AGENTS.md, independently of the gate's output.
+#
+# expected:   problems the gate must report (recall is measured on these).
+# acceptable: debatable findings that are neither rewarded nor penalized.
+# A finding matches an item when the rule is equal, the file is equal (when given) and the
+# line falls inside `lines` +/- line_window (file-level findings match any line of the file).
+#
+# head: the commit the ground truth describes. Golden PRs are pinned so they can't drift.
+# verdict: block (any Critical/High expected), comment (merge with comments), sound.
+# The harness compares it with the gate's real merge decision, counting EVERY finding the
+# gate posts, process rules included (that is how the PR #12 false block shows up).
+#
+# Precision/recall score the team standards only (AGENTS#1-9). Process rules (#16 README,
+# #18 records, #20 docs) are not in TEAM-STANDARDS.md and fire on almost every PR here, so
+# scoring them per finding would mostly measure bookkeeping. They're comment-only, and the
+# verdict metric checks that they never block.
+
+scope_rules: [AGENTS#1, AGENTS#2, AGENTS#3, AGENTS#4, AGENTS#5, AGENTS#6, AGENTS#7, AGENTS#8, AGENTS#9]
+line_window: 3
+acceptable_everywhere:
+  - {rule: AGENTS#7, severity: low}   # formatting/style
+  - {rule: AGENTS#9, severity: low}   # naming/refactoring ideas
+
+prs:
+  - branch: feature/lessons-pagination
+    head: 386b2e1d2882820c82977cbfd7361d3aea6b6865
+    title: Add pagination to lessons list
+    body: The catalog will grow to hundreds of lessons; adds limit/offset with validation and tests.
+    verdict: sound
+    expected: []
+    acceptable:
+      - {rule: AGENTS#5, file: app/main.py}   # manual 422 instead of Query(ge=, le=): style-level
+      - {rule: AGENTS#6}                      # boundary cases (limit=100/101) could be tested
+
+  - branch: feature/score-validation
+    head: 60a6090693bc327d90838943f13890ca803f37a0
+    title: Validate lesson and score on progress recording
+    body: We were accepting any lesson_id and out-of-range scores. Adds validation and tests.
+    verdict: comment
+    expected:
+      # Changed twice (EVAL.md has the history). A non-numeric score still crashes with a 500,
+      # so the finding is real. But that int() was already on main: the PR only moved it while
+      # adding the validation it promised. Pre-existing debt gets a comment, not a block.
+      - {id: pr2-score-500, rule: AGENTS#5, severity: medium, file: app/main.py, lines: [50, 54],
+         why: "int(payload.get('score')) on a non-numeric score raises ValueError -> 500 (pre-existing, moved by the PR)"}
+    acceptable:
+      - {rule: AGENTS#6}                      # tests mutate shared in-memory state
+
+  - branch: fix/mobile-sync-visibility
+    head: fa726eb00be931ad67a4b11f1282f1838563975f
+    title: Add sync visibility for mobile progress bug
+    body: Support reports progress not showing up after using the mobile app. Adds logging so reported cases can be traced.
+    verdict: block
+    expected:
+      - {id: pr3-pii-in-logs, rule: AGENTS#1, severity: critical, file: app/main.py, lines: [57, 63],
+         why: "full_name and email (minors' data) logged in plain text"}
+    acceptable:
+      - {rule: AGENTS#6}   # logging-only change without tests
+      - {rule: AGENTS#2}   # logs consumed by support = data leaving the service
+
+  - branch: feature/support-context
+    head: dfabcaeb1fedc65330928a29271b00efb40c5bce   # pinned: the branch tip now has develop merged in (GitHub 'Update branch' on PR #10)
+    title: "Support tooling: context on progress lookups"
+    body: Support loses 20 minutes per ticket gathering data from 3 systems. This helper logs a compact context on each lookup.
+    verdict: block
+    expected:
+      - {id: pr4-pii-in-logs, rule: AGENTS#1, severity: critical, file: app/main.py, lines: [37, 37],
+         why: "name, email and birthdate logged on every lookup, through a helper"}
+      - {id: pr4-not-minimized, rule: AGENTS#4, severity: critical, file: app/support.py, lines: [4, 10],
+         why: "support context carries name/email/birthdate where student_id would do"}
+      - {id: pr4-no-tests, rule: AGENTS#6, severity: high,
+         why: "new helper without tests"}
+    acceptable:
+      - {rule: AGENTS#1, file: app/support.py}   # pointing at the helper instead of the log call
+      - {rule: AGENTS#2}                         # minors' data handed to support tooling
+
+  - branch: feature/email-reminders
+    head: e1732cb7b95d42ad36f1a5b00583fb61bea8c119
+    title: Scaffolding for inactivity email reminders
+    body: First step for email reminders. Scaffolding only, nothing is sent yet.
+    verdict: block
+    expected:
+      - {id: pr5-secret, rule: AGENTS#8, severity: critical, file: app/notifications.py, lines: [7, 7],
+         why: "SendGrid API key committed"}
+      - {id: pr5-email-in-logs, rule: AGENTS#1, severity: critical, file: app/notifications.py, lines: [13, 13],
+         why: "recipient email logged in plain text"}
+      - {id: pr5-todo, rule: AGENTS#7, severity: medium, file: app/notifications.py, lines: [6, 6],
+         why: "TODO without a ticket"}
+      - {id: pr5-no-tests, rule: AGENTS#6, severity: high,
+         why: "new module without tests"}
+      # Added in the second ground-truth pass (was 'acceptable'). The module exists to send
+      # students' emails to SendGrid. For a minor that is personal data leaving the service to a
+      # third party with no minimization (guardian contact instead of the child's address) and
+      # no documented basis (COPPA wants verifiable parental consent). Scaffolding is the cheapest
+      # moment to catch it, so it blocks now.
+      - {id: pr5-minors-to-sendgrid, rule: AGENTS#2, severity: high, file: app/notifications.py, lines: [1, 13],
+         why: "reminder emails to students go to SendGrid; minors' addresses would leave the service with no minimization or legal basis"}
+    acceptable: []
+
+  - branch: feature/streaks
+    head: b5133c29895d6a98ceb2e595b10c4e89093ac71f
+    title: Lesson streak calculation
+    body: Consecutive-day streak calculation for gamification. Includes tests.
+    verdict: block
+    expected:
+      - {id: pr6-streak-bug, rule: AGENTS#9, severity: high, file: app/streaks.py, lines: [5, 14],
+         why: "starts counting yesterday: today's activity never counts (docstring says ending today)"}
+      - {id: pr6-weak-tests, rule: AGENTS#6, severity: high, file: tests/test_streaks.py, lines: [1, 17],
+         why: "isinstance / >= 0 assertions can't detect a regression"}
+    acceptable: []
+
+  - branch: feature/analytics-archive
+    head: d5ecfb126399ae9b214500ab71e75e5707a2264d
+    title: Archive progress events for cohort analytics
+    body: Analytics needs to slice cohorts without joins. Archives each progress event with student attributes.
+    verdict: block
+    expected:
+      - {id: pr7-no-retention, rule: AGENTS#3, severity: critical, file: app/archive.py, lines: [1, 22],
+         why: "copy of minors' personal data kept indefinitely, no RETENTION_DAYS category"}
+      - {id: pr7-not-minimized, rule: AGENTS#4, severity: critical, file: app/archive.py, lines: [11, 22],
+         why: "copies full_name, birthdate, is_minor for analytics"}
+      - {id: pr7-no-tests, rule: AGENTS#6, severity: high,
+         why: "new archive logic without tests"}
+      # Added in the second ground-truth pass (was 'acceptable'): the archive exists to be read
+      # by the analytics team and carries is_minor, so it hands minors' records to another team.
+      - {id: pr7-minors-to-analytics, rule: AGENTS#2, severity: critical, file: app/archive.py, lines: [1, 22],
+         why: "minors' records, flagged with is_minor, handed to analytics without minimization or legal basis"}
+    acceptable:
+      - {rule: AGENTS#1, file: app/archive.py}
+
+  - branch: fix/progress-percentage
+    head: a620c3832d9a587624814a2f9c0dd9a566345c92
+    title: Fix percentage rounding inconsistencies
+    body: The app reports percentages inconsistent with the backend. Unifies the calculation and covers the no-lessons edge case.
+    verdict: block
+    expected:
+      - {id: pr8-wrong-percentage, rule: AGENTS#9, severity: high, file: app/main.py, lines: [38, 38],
+         why: "int() truncates (2/3 -> 66) and an empty catalog reports 100% complete"}
+    acceptable:
+      - {rule: AGENTS#6, file: tests/test_progress.py}   # the new test locks in the wrong 100%

@@ -1,0 +1,17 @@
+# R06-A — Tests exist, pass and cover changed lines (deterministic)
+
+**Rule:** AGENTS#6 · **Pipeline:** A · **Checks:** A8, A9, A10 · **Severity:** High · **Depends on:** R11-A
+
+## Scope
+- **A8** `pytest`: a failing test produces a finding with the test name.
+- **A9** `gate/deterministic/change_policy.py` (`tests_touched`): `app/` changed but `tests/` not changed. This applies to refactors too.
+- **A10** `pytest-cov` + coverage.xml parsed in `gate/report/adapters.py`: changed lines must reach **≥ 85%** coverage. Each uncovered line is reported. When A9 fires (no test touched), A10 is dropped at merge time: one root cause, one finding (approved 2026-10-07).
+
+## Test
+`tests/gate/deterministic/test_r06_tests_coverage.py::test_r06_tests_coverage`
+The test builds two throwaway git repos in `tmp_path`, each with a `main` commit and a feature commit.
+- **Violation repo:** the feature adds an untested branch in `app/` (coverage of changed lines below 85%), changes no file under `tests/`, and contains one failing test.
+- **Compliant repo:** the feature adds the logic together with tests covering 100% of the changed lines, and all tests pass.
+- **Expect:**
+  - violation: three High `AGENTS#6` findings, one each from A8, A9 and A10;
+  - compliant: zero `AGENTS#6` findings.
