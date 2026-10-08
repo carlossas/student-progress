@@ -3,6 +3,15 @@
 Open English LMS service that tracks lesson progress, plus an **AI quality gate** that reviews every PR against the team rules.
 **Some students are minors.** Read [AGENTS.md](AGENTS.md) before changing anything.
 
+## Get the code
+
+The gate and the deliverables live on **`develop`**. `main` is the untouched seed, so clone `develop`:
+
+```bash
+git clone -b develop https://github.com/carlossas/student-progress.git
+cd student-progress
+```
+
 ## Running locally
 
 Requires **Python 3.11+** and git:
@@ -14,23 +23,45 @@ uvicorn app.main:app --reload
 pytest
 ```
 
-On Windows: `py -m venv .venv` and `.venv\Scripts\activate`. CI runs these exact commands on a clean machine (AGENTS#16).
+- **Windows:** `py -m venv .venv`, then `.venv\Scripts\activate` (PowerShell) or `source .venv/Scripts/activate` (Git Bash).
+- `uvicorn` keeps the terminal busy. Open http://127.0.0.1:8000/health, then run `pytest` in a second terminal.
+
+CI runs these exact commands on a clean machine (AGENTS#16). Measured from a fresh clone: about a minute.
 
 ## Endpoints
 
 `GET /health` · `GET /lessons` · `GET /students/{id}/progress` · `POST /students/{id}/progress` (`{"lesson_id": "...", "score": 0-100}`). Data lives in memory. Details: [docs/API-AND-BUSINESS-RULES.md](docs/API-AND-BUSINESS-RULES.md).
 
-## Quality gate in 2 minutes
+## Run the quality gate
+
+**1. On the 8 golden PRs (the challenge's test set):**
 
 ```bash
-python -m gate all                        # everything before a PR: hooks, lint, tests, both pipelines
-python -m gate check --base main          # scripts only, free
-python -m gate check --base main --ai     # + Gemini (needs GEMINI_API_KEY)
-python -m gate eval                       # score the gate on the 8 golden PRs
-npm install                               # optional: pre-commit / pre-push hooks
+python -m gate eval                       # scripts only, free: verdict + precision/recall per PR
+python -m gate eval --ai                  # + Gemini (needs GEMINI_API_KEY), what EVAL.md reports
 ```
 
-Exit code 1 = the PR would be blocked. Critical/High block, Medium/Low comment. It runs in `enforce` on `develop`; `main` doesn't have it yet.
+**2. On one PR, with the full report** (severity, rule, file:line, suggested fix). The PR branches don't contain the gate, so check the PR out next to this repo and point the gate at it:
+
+```bash
+git worktree add ../pr-email feature/email-reminders
+python -m gate check --repo ../pr-email --base main          # add --ai for Gemini
+```
+
+Exit code 1 means the PR would be blocked. Try `feature/lessons-pagination` for one that passes.
+
+**3. On your own branch, before opening a PR:**
+
+```bash
+python -m gate all                        # lint, tests + coverage, both pipelines, one verdict
+npm install                               # optional: pre-commit / pre-push hooks (needs Node)
+```
+
+Critical/High block, Medium/Low only comment. On GitHub it runs in `enforce` on `develop`; `main` doesn't have it yet.
+
+Gemini key: `export GEMINI_API_KEY=...` (PowerShell: `$env:GEMINI_API_KEY = "..."`). Without it the AI step is skipped and the scripts decide on their own.
+
+`gate eval` refreshes the cached results in `eval/results/`. Run `git checkout -- eval/results` before switching branches if you don't want to keep them.
 
 | Doc | What |
 |---|---|
