@@ -67,7 +67,7 @@ npm install                               # optional: pre-commit / pre-push hook
 
 Critical/High block, Medium/Low only comment. On GitHub it runs in `enforce` on `develop`; `main` doesn't have it yet.
 
-`gate eval` refreshes the cached results in `eval/results/`. Run `git checkout -- eval/results` before switching branches if you don't want to keep them.
+`gate eval` keeps its raw results in `eval/results/` (gitignored, local only).
 
 | Doc | What |
 |---|---|

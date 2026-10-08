@@ -10,3 +10,4 @@ gate-out/
 .env
 .env.*
 !.env.example
+eval/results/
