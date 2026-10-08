@@ -105,7 +105,7 @@ Verdict flips: **0/8 PRs**. Right merge call per run: 8/8, 8/8, 8/8.
 **Why:** It's scaffolding: nothing calls SendGrid yet, so the outbound script had nothing to match. The AI judged the code that exists, not what the module is for.
 **Change:** A script, not a prompt (`gate/deterministic/vendor_channel.py`, A18). A changed module that names a known vendor and has a function handling a personal field gets High #2, unless the PR says `Legal basis: ...`. It stays quiet when the module already calls the vendor (pii_flow follows that data) or only handles `student_id`. Recall 0.88 → 0.94, still 0 FP and 8/8 verdicts. I picked a script because it's free, can't drift with the model, and doesn't need another prompt change measured across variants.
 
-### fn-pr7-minors-to-analytics (open)
+### fn-pr7-minors-to-analytics
 **Why:** The PR is already blocked for retention and minimization, and the AI's fix covers this too. The model folds "data goes to analytics" into "too many fields".
 **Change:** Not done yet. Next is a fixture where minimization is fine but the data goes to a third party, so #2 has to show up on its own (DECISIONS.md backlog #9).
 

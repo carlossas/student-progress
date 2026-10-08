@@ -55,17 +55,24 @@ Override (admin/maintain only, logged): comment `/gate-override <reason>`.
 
 ## Cost
 
-About $0.003 per AI review (measured), and $0 when re-running an unchanged PR (cache). Every run logs its AI + CI cost on the PR.
+Every run logs its own bill on the PR, split in two: `AI $… + CI N runner-min $…`. Measured on the last run of the 8 golden PRs:
 
-Estimate for a normal day: 5 developers × 2 medium PRs, 3 gate runs per PR (opened + 2 fix pushes), a conservative $0.01 of AI per run, 5 CI minutes per run.
+| Per gate run | LLM (Gemini) | Pipeline (GitHub Actions) |
+|---|---|---|
+| Measured | $0.0033–$0.0051, avg $0.0044 | 4–5 runner-min, avg 4.1 |
+| At list price | same | $0.025 ($0.006/min) |
+| On this public repo | same | $0 |
+| Grows with | PR size (tokens) | number of runs |
 
-| | Per PR | Per day | Per month (21 days) | From Jan 2027 (Gemini ×2) |
-|---|---|---|---|---|
-| AI (Gemini) | $0.03 | $0.30 | ≈ $6.30 | ≈ $12.60 |
-| CI, this public repo | $0 | $0 | $0 | $0 |
-| CI if private (list price) | $0.09 | $0.90 | ≈ $18.90 | ≈ $18.90 |
+Estimate for a normal day: 5 developers × 2 PRs, 3 gate runs per PR (opened + 2 fix pushes) = 630 runs a month (21 days).
 
-Formula: devs × PRs/day × runs/PR × days × $/run. At org scale, runner minutes cost more than the LLM (DECISIONS.md, scaling).
+| | Per PR | Per month | From Jan 2027 (Gemini ×2) |
+|---|---|---|---|
+| LLM | $0.013 | ≈ $2.75 | ≈ $5.50 |
+| Pipeline, this public repo | $0 | $0 | $0 |
+| Pipeline if private (list price) | $0.074 | ≈ $15.60 | ≈ $15.60 |
+
+Formula: devs × PRs/day × runs/PR × days × $/run, once per bill. A private repo needs ~2.6k minutes a month for this, which may fit in the plan's included minutes if nothing else uses them. The cheapest lever is CI, not the LLM: the 4 jobs do ~1.5 min of real work but each is billed a full minute.
 
 ## Troubleshooting
 

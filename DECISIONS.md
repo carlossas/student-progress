@@ -39,7 +39,7 @@ Critical/High = S1/S2 from TEAM-STANDARDS, nothing invented. Two calls came from
 ## ADR-4 · One Gemini call per PR, stable and cheap
 
 One structured call with temperature 0 and a fixed seed: temperature alone still flipped a High between runs. The seed only makes *identical* prompts repeat: a prompt that differed in an irrelevant way (the order of the scripts' findings) flipped `score-validation` in CI. The fix was a sharper criterion, not more randomness control: ambiguous severity rules get resolved at random. The eval now measures stability across prompt variants (`--variants`). LOW thinking and a JSON schema. Findings with an unknown rule or a line outside the diff are dropped, never posted.
-Cost is ~$0.003 per review: cache by request hash, output capped at 4k tokens (doubled up to 16k if a review needs it), large PRs split into ≤30k-token batches. The cap was 2k until a review with many real problems got cut off in CI.
+Cost is ~$0.004 per review: cache by request hash, output capped at 4k tokens (doubled up to 16k if a review needs it), large PRs split into ≤30k-token batches. The cap was 2k until a review with many real problems got cut off in CI.
 
 ## ADR-5 · The eval's headline is the merge verdict
 
@@ -51,7 +51,7 @@ Not built, but this is the order I'd do it in:
 1. **One shared gate**, versioned (backlog #1). Each repo only configures its PII fields and retention.
 2. **Bedrock instead of Gemini.** Code stays in our AWS account, access goes through IAM, no extra DPA. The client is already one interface; I'd re-run the eval before switching.
 3. **SLO + degraded mode** (backlog #4).
-4. **Cost at scale is CI, not the LLM.** 100 devs is ~900 reviews/day: ~$4/day of AI vs ~$22/day of runner minutes.
+4. **Cost at scale is CI, not the LLM.** 100 devs is ~900 runs/day: ~$4/day of AI vs ~$22/day of runner minutes, most of it per-job rounding. Fewer, merged jobs come first.
 5. **Measure in production.** Override rate, false blocks, time-to-merge. Every override becomes a fixture.
 6. **The gate is one layer.** In production: CloudWatch log data protection, Macie, PII tagged in the models.
 

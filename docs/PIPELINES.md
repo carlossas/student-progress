@@ -13,16 +13,21 @@ How the two review pipelines work, what they cost and how we keep that cost down
 
 **How well it works.** On the 8 reference PRs the gate makes the right merge call on all 8 (no false blocks, no missed blocks). Measured with fresh Gemini calls, and the verdict holds across 3 prompt variants. A cached run once hid a false block; the first fresh run caught it (EVAL.md). Per finding: precision 1.00, recall 0.94 (17 of 18). The one miss is minors' records handed to analytics. Neither pipeline gets there alone. Details: [EVAL.md](../EVAL.md).
 
-**What it costs.**
+**What it costs.** Two separate bills: the LLM (Gemini) and the pipeline (GitHub Actions minutes). Measured on the last run of the 8 reference PRs (2026-10-08), as logged on each PR:
 
-| | Per AI review | 1,000 AI reviews / month |
-|---|---|---|
-| Rules engine | $0 (CI minutes; free on a public repo) | $0 |
-| AI reviewer, today's prices (measured) | $0.0027–$0.0041, avg ≈ $0.0035 | ≈ $3.50 |
-| AI reviewer, after Jan 1, 2027 (prices double) | ≈ $0.007 | ≈ $7 |
-| Re-run of an unchanged PR | $0 (served from cache) | — |
+| | Per gate run | What drives it | 5 devs / month (630 runs) |
+|---|---|---|---|
+| LLM, today's prices | $0.0033–$0.0051, avg $0.0044 | Tokens: ~5k in, ≤ 300 out, one request | ≈ $2.75 |
+| LLM, from Jan 1, 2027 (prices double) | ≈ $0.009 | Same | ≈ $5.50 |
+| Pipeline (CI minutes) | 4–5 runner-min = $0.024–$0.030 | 4 jobs, each billed at least 1 min | $0 here (public repo); ≈ $15.60 at list price if private |
+| Re-run of an unchanged PR | CI only | LLM served from cache | — |
 
-Measured on the 8 reference PRs (2026-10-07): 3.5k–4.3k input tokens, 5–331 output tokens, 0 thinking tokens, ≈ 6 s per review. Every gate run logs its full cost (AI + CI minutes) on the PR; a real PR in CI (#10) cost $0.0041 of AI and 4 runner-minutes. For a team of 5 developers opening 2 PRs each per day, the gate costs ≈ $6/month in Gemini (CI minutes are free on this public repo; ≈ $19/month at list price if it were private); details in [PIPELINE_README.md](../PIPELINE_README.md#cost).
+What this means:
+- **The pipeline costs more than the LLM**, about 85% of a run at list price. The 4 jobs do ~1.5 minutes of real work, but GitHub rounds each job up to a whole minute. Merging them into fewer jobs would roughly halve the CI bill.
+- **The LLM grows with PR size, the pipeline with PR count.** A 167-file PR cost $0.14 of LLM (batched); CI stays at ~4 minutes.
+- **The LLM is the only price we don't control**: it doubles in January 2027. Even then, it's ≈ $5.50/month for 5 developers.
+
+630 runs = 5 developers × 2 PRs/day × 3 runs/PR × 21 days. Formulas and the team calculator: [PIPELINE_README.md](../PIPELINE_README.md#cost).
 
 **Recommendation.** Keep `gemini-3.8-flash`: it is Google's newest Flash model and the cost is negligible next to the cost of shipping one privacy incident involving minors. Before prices double in January 2027, run the existing evaluation against the cheaper `gemini-3.5-flash-lite`; switch only if it finds the same Critical problems.
 
