@@ -61,3 +61,9 @@ Not built, but this is the order I'd do it in:
 2. Fork PRs (no secrets → the AI job fails closed).
 3. Auto-open an incident + rotation runbook on a committed secret.
 4. Make the `eval` check required for PRs that touch `gate/ai/` (#26 merged with it red).
+
+## Backlog
+
+- **One shared gate for every service.** Move the pipeline and its tests into their own repo or package, so a fix lands everywhere at once. Version the tests, prompts and LLM settings together, and let each service pin a version and upgrade when it's ready.
+- **Tickets for what gets left behind.** When a developer merges without fixing a Medium or Low comment, open a ticket for it automatically, linked to the PR and the line. Nothing gets lost, and the merge isn't blocked.
+- **A dashboard per developer.** Which mistakes show up most, how PRs are trending, code quality over time. The point is to know where to coach, not to rank people.
