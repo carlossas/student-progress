@@ -144,7 +144,7 @@ flowchart TB
         det["deterministic job<br/>gate/deterministic/*<br/>secrets · PII flow · retention · validation<br/>ruff/vulture · TODO · pytest + coverage<br/>tests/docs touched · records"]
         smoke["smoke job<br/>README 'Running locally' on a clean runner"]
         ai["ai job (PRs into develop/main)<br/>gate/ai: prompt_builder → Gemini → validate"]
-        report["report job<br/>merge + dedupe → severity policy (actions.py)<br/>→ statuses, sticky summary, review comments"]
+        report["report job<br/>merge + dedupe → severity policy (actions.py)<br/>→ statuses, sticky summary, review comments<br/>(latest run only)"]
         det -- "findings + signals" --> ai
         det --> report
         smoke --> report
