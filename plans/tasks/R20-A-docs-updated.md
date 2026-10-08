@@ -3,7 +3,7 @@
 **Rule:** AGENTS#20 · **Pipeline:** A · **Check:** A14 · **Severity:** Medium (was High until PR #22: it blocked the only sound PR) · **Depends on:** R11-A
 
 ## Scope
-`gate/deterministic/docs_touched.py`, diff mode: if any file under `app/` changed, both `docs/ARCHITECTURE.md` and `docs/API-AND-BUSINESS-RULES.md` must appear in the diff.
+`gate/deterministic/change_policy.py` (`docs_touched`), diff mode: if any file under `app/` changed, both `docs/ARCHITECTURE.md` and `docs/API-AND-BUSINESS-RULES.md` must appear in the diff.
 - Refactors are included, with no skip label.
 - The finding is file-level and names the missing doc or docs.
 

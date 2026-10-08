@@ -13,7 +13,7 @@ Prompt section `gate/ai/prompts/r06_test_quality.md`. It judges whether tests ca
 The prompt receives the A10 coverage report so the model can spot high coverage with weak asserts.
 
 ## Test
-`tests/gate/ai/test_r06_test_quality.py::test_r06_test_quality_ai` (`@pytest.mark.ai`)
+`tests/gate/ai/test_r06_test_quality_ai.py::test_r06_test_quality_ai` (`@pytest.mark.ai`)
 - **Violation fixture:** a diff that adds percentage logic. Its tests:
   - `assert resp.status_code in (200, 404)`;
   - mock the function under test;

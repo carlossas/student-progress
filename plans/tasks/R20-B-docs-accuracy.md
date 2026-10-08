@@ -10,7 +10,7 @@ Prompt section `gate/ai/prompts/r20_docs.md`. It receives the code diff and the 
 - modules.
 
 ## Test
-`tests/gate/ai/test_r20_docs_accuracy.py::test_r20_docs_accuracy_ai` (`@pytest.mark.ai`)
+`tests/gate/ai/test_r20_docs_accuracy_ai.py::test_r20_docs_accuracy_ai` (`@pytest.mark.ai`)
 - **Violation fixture:** a diff that adds `GET /students/{id}/streak`. The docs were touched (a typo fix only), but the endpoint and its streak rule are not documented.
 - **Compliant fixture:** the same diff, with the endpoint added to the endpoints table and a new BR row.
 - **Expect:**

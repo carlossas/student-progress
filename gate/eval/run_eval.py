@@ -53,15 +53,6 @@ class Score:
     fn: list[dict] = field(default_factory=list)
     ignored: list[Finding] = field(default_factory=list)
 
-    @property
-    def precision(self) -> float | None:
-        total = len(self.tp) + len(self.fp)
-        return len(self.tp) / total if total else None
-
-    def recall(self, expected: int) -> float | None:
-        found = len({gid for _, gid in self.tp})
-        return found / expected if expected else None
-
 
 def score_pr(pr: dict, findings: list[Finding], truth: dict) -> Score:
     window = truth.get("line_window", 3)

@@ -4,7 +4,7 @@
 
 ## Scope
 - **P1** `gate/deterministic/pii_registry.py`: dataclass fields in `app/models.py` with personal-looking names (`name`, `mail`, `birth`, `dob`, `age`, `phone`, `address`, `minor`, `document`) must be in `PII_FIELDS`.
-- **P2** `.semgrep/pii.yml` taint rules:
+- **P2** `gate/deterministic/pii_flow.py`, AST taint tracking with one level of cross-function summaries:
   - sources: `full_name`, `email`, `birthdate`, `is_minor` (as attribute, dict key or kwarg);
   - sanitizer: `redact()`;
   - Critical sinks: logging, `print`, exception messages, route return values, outbound calls;

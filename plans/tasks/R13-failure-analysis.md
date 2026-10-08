@@ -10,7 +10,7 @@
   - source pipeline;
   - file and line;
   - the finding or expected-finding text.
-- `EVAL.md` gets a "Failure analysis" section with one entry per FP/FN. The harness fills in the facts. A person (or agent) writes **why it happened** and **what we change** (prompt, semgrep rule, threshold).
+- `EVAL.md` gets a "Failure analysis" section with one entry per FP/FN. The harness fills in the facts. A person (or agent) writes **why it happened** and **what we change** (prompt, check, threshold).
 - The harness fails if any FP/FN entry is missing its analysis, so the eval can't be marked done with unexplained errors.
 
 ## Test

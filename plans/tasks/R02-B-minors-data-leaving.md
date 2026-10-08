@@ -9,7 +9,7 @@ Prompt section `gate/ai/prompts/r02_outbound.md`. For each A5 signal, the model 
 - whether the **PR description** documents a legal basis.
 
 ## Test
-`tests/gate/ai/test_r02_minors_data_leaving.py::test_r02_minors_data_leaving_ai` (`@pytest.mark.ai`)
+`tests/gate/ai/test_r02_minors_data_leaving_ai.py::test_r02_minors_data_leaving_ai` (`@pytest.mark.ai`)
 - **Violation fixture:** a diff that sends per-student progress with `country` and `birthdate` to a support tool. PR description: "Support needs context".
 - **Compliant fixture:** a diff that sends only aggregated counts keyed by `student_id`. The PR description documents the purpose and legal basis.
 - **Expect:**

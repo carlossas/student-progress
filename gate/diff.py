@@ -135,9 +135,6 @@ class DiffContext:
         lines = self.lines(path)
         return any(n in lines for n in range(first, (last or first) + 1))
 
-    def touches(self, prefix: str) -> bool:
-        return any(p.startswith(prefix) for p in self.files())
-
     def history_added_lines(self) -> list[tuple[str, str, str]]:
         """(commit, path, text) for every line added by any commit in the range (refs mode only)."""
         if self.mode != "refs" or not self.base:

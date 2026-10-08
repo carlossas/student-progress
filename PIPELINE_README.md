@@ -57,6 +57,16 @@ Override (admin/maintain only, logged): comment `/gate-override <reason>`.
 
 About $0.003 per AI review (measured), and $0 when re-running an unchanged PR (cache). Every run logs its AI + CI cost on the PR.
 
+Estimate for a normal day: 5 developers × 2 medium PRs, 3 gate runs per PR (opened + 2 fix pushes), a conservative $0.01 of AI per run, 5 CI minutes per run.
+
+| | Per PR | Per day | Per month (21 days) | From Jan 2027 (Gemini ×2) |
+|---|---|---|---|---|
+| AI (Gemini) | $0.03 | $0.30 | ≈ $6.30 | ≈ $12.60 |
+| CI, this public repo | $0 | $0 | $0 | $0 |
+| CI if private (list price) | $0.09 | $0.90 | ≈ $18.90 | ≈ $18.90 |
+
+Formula: devs × PRs/day × runs/PR × days × $/run. At org scale, runner minutes cost more than the LLM (DECISIONS.md, scaling).
+
 ## Troubleshooting
 
 | Symptom | Fix |
