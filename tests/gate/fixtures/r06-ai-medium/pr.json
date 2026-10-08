@@ -1,0 +1,1 @@
+{"title": "Validate lesson and score on progress recording", "body": "We were accepting any lesson_id and out-of-range scores. Adds validation and tests."}

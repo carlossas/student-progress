@@ -85,3 +85,24 @@ def test_r12_golden_prs_are_pinned(tmp_path):
     commit(repo, {"a.txt": "2\n"}, "moved on")
     assert pr_head(repo, {"branch": "main", "head": original}) == original
     assert pr_head(repo, {"branch": "main"}) == "main"
+
+
+def test_r12_stability_across_prompt_variants():
+    # A PR whose verdict depends on the prompt variant is flagged, even if one run got it right.
+    from gate.eval.run_eval import permuted, stability
+
+    truth = {"prs": [{"branch": "steady", "verdict": "block"}, {"branch": "flaky", "verdict": "comment"}]}
+    critical = f("AGENTS#1", "critical", "app/main.py", 3)
+    high = f("AGENTS#6", "high", "tests/t.py", 18)
+    runs = [
+        {"steady": [critical], "flaky": []},
+        {"steady": [critical], "flaky": [high]},
+        {"steady": [critical], "flaky": []},
+    ]
+    st = stability(truth, runs)
+    assert st["flipped"] == 1 and st["correct_per_variant"] == [2, 1, 2]
+    assert [r["stable"] for r in st["rows"]] == [True, False]
+
+    # Variants reorder the same content, reproducibly.
+    items = list(range(10))
+    assert sorted(permuted(items, 1)) == items and permuted(items, 1) == permuted(items, 1) != items

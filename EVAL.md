@@ -56,6 +56,14 @@ Per PR (combined):
 - Right merge call on 8/8. Neither pipeline gets there alone.
 - 8 PRs is small: recall 16/18 has a 95% interval of about 0.67-0.97.
 
+## Stability across prompt variants
+
+The fixed seed makes two identical prompts give the same answer. It says nothing about a prompt that changes in irrelevant ways, which happens every time the scripts' findings change. `python -m gate eval --ai --variants 3` re-runs the AI with the scripts' findings and signals shuffled and reports which merge verdicts flip.
+
+<!-- eval:stability:start -->
+_Not run yet._
+<!-- eval:stability:end -->
+
 ## Failure analysis
 
 <!-- eval:failures:start -->
