@@ -3,7 +3,7 @@
 **Rule:** AGENTS#18 · **Pipeline:** A · **Check:** A16 · **Severity:** Low · **Depends on:** R11-A
 
 ## Scope
-`gate/deterministic/records.py`:
+`gate/deterministic/change_policy.py` (`records`):
 - checks that `DECISIONS.md` and `AI-USAGE.md` exist at the repo root;
 - checks that neither file is empty, meaning each has at least one heading beyond the title.
 

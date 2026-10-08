@@ -4,7 +4,7 @@
 
 ## Scope
 - **A6** `ruff` with rules `E722`, `BLE001`, `S110`: bare or broad `except`, and `except: pass`.
-- **A7** `.semgrep/validation.yml`: route handlers that take a raw `dict` (or untyped body) instead of a Pydantic model.
+- **A7** `gate/deterministic/validation.py` (AST): route handlers that take a raw `dict` (or untyped body) instead of a Pydantic model.
 
 Both checks convert their tool output to findings through R11-A.
 

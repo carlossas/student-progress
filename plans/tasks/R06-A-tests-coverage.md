@@ -4,8 +4,8 @@
 
 ## Scope
 - **A8** `pytest`: a failing test produces a finding with the test name.
-- **A9** `gate/deterministic/tests_touched.py`: `app/` changed but `tests/` not changed. This applies to refactors too.
-- **A10** `pytest-cov` + `diff-cover`: changed lines must reach **≥ 85%** coverage. Each uncovered line is reported. When A9 fires (no test touched), A10 is dropped at merge time: one root cause, one finding (approved 2026-10-07).
+- **A9** `gate/deterministic/change_policy.py` (`tests_touched`): `app/` changed but `tests/` not changed. This applies to refactors too.
+- **A10** `pytest-cov` + coverage.xml parsed in `gate/report/adapters.py`: changed lines must reach **≥ 85%** coverage. Each uncovered line is reported. When A9 fires (no test touched), A10 is dropped at merge time: one root cause, one finding (approved 2026-10-07).
 
 ## Test
 `tests/gate/deterministic/test_r06_tests_coverage.py::test_r06_tests_coverage`

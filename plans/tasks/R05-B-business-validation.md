@@ -11,7 +11,7 @@ Prompt section `gate/ai/prompts/r05_validation.md`. It covers validation that a 
 The prompt includes `docs/API-AND-BUSINESS-RULES.md` as domain context.
 
 ## Test
-`tests/gate/ai/test_r05_business_validation.py::test_r05_business_validation_ai` (`@pytest.mark.ai`)
+`tests/gate/ai/test_r05_business_validation_ai.py::test_r05_business_validation_ai` (`@pytest.mark.ai`)
 - **Violation fixture:** a Pydantic model with `score: int` (no bounds), and a handler that stores any `lesson_id` without checking `store.LESSONS`.
 - **Compliant fixture:** `score: int = Field(ge=0, le=100)`, and a handler that returns 404 for an unknown `lesson_id`.
 - **Expect:**

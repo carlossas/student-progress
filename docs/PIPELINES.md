@@ -22,7 +22,7 @@ How the two review pipelines work, what they cost and how we keep that cost down
 | AI reviewer, after Jan 1, 2027 (prices double) | ≈ $0.007 | ≈ $7 |
 | Re-run of an unchanged PR | $0 (served from cache) | — |
 
-Measured on the 8 reference PRs (2026-10-07): 3.5k–4.3k input tokens, 5–331 output tokens, 0 thinking tokens, ≈ 6 s per review. Every gate run logs its full cost (AI + CI minutes) on the PR; a real PR in CI (#10) cost $0.0041 of AI and 4 runner-minutes. For a team of 5 developers opening 2 PRs each per day, the gate costs ≈ $6/month in Gemini (CI minutes are free on this public repo; ≈ $19/month at list price if it were private); details in [PIPELINE_README.md](../PIPELINE_README.md#6-what-it-costs).
+Measured on the 8 reference PRs (2026-10-07): 3.5k–4.3k input tokens, 5–331 output tokens, 0 thinking tokens, ≈ 6 s per review. Every gate run logs its full cost (AI + CI minutes) on the PR; a real PR in CI (#10) cost $0.0041 of AI and 4 runner-minutes. For a team of 5 developers opening 2 PRs each per day, the gate costs ≈ $6/month in Gemini (CI minutes are free on this public repo; ≈ $19/month at list price if it were private); details in [PIPELINE_README.md](../PIPELINE_README.md#cost).
 
 **Recommendation.** Keep `gemini-3.8-flash`: it is Google's newest Flash model and the cost is negligible next to the cost of shipping one privacy incident involving minors. Before prices double in January 2027, run the existing evaluation against the cheaper `gemini-3.5-flash-lite`; switch only if it finds the same Critical problems.
 

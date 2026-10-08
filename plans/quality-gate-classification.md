@@ -176,6 +176,7 @@ Deviations from the sections above, with the reason in [DECISIONS.md](../DECISIO
 | P2 copy of personal data: High | **Critical** | Reviewing live PR #17: a copy of minors' data without retention is S1 (approved 2026-10-07) |
 | A9 and A10 both reported | A10 dropped when A9 fires | One root cause, one finding (live PR #15) |
 | Merge on identical (rule, file, line) | AI finding within ±3 lines of a script finding with the same rule is merged | Live PR #14 got two comments for one log call (PR #19) |
+| — | **Added after the live review (PR #22):** A17 prompt-injection check (`gate/deterministic/prompt_injection.py`, AGENTS#15); High code-quality findings (#5, #7, #9) on lines the PR only moved are demoted to Medium (`gate/report/baseline.py`; privacy, secrets and tests never are); secrets are masked in files and PR text before any request reaches Gemini (`secrets_scan.mask_secrets`) | Second layer against PR text steering the reviewer; don't make authors pay for debt they only moved; no secret ever leaves through the AI call |
 
 ## 9. AI cost controls
 

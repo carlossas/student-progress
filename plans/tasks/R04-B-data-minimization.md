@@ -6,7 +6,7 @@
 Prompt section `gate/ai/prompts/r04_minimization.md`. It flags features that attach name, email, birthdate or `is_minor` when `student_id` would be enough for the stated purpose. The finding is Critical when the data can belong to minors.
 
 ## Test
-`tests/gate/ai/test_r04_data_minimization.py::test_r04_data_minimization_ai` (`@pytest.mark.ai`)
+`tests/gate/ai/test_r04_data_minimization_ai.py::test_r04_data_minimization_ai` (`@pytest.mark.ai`)
 - **Violation fixture:** a support helper that builds a lookup context with `full_name`, `email` and `birthdate` to "speed up tickets".
 - **Compliant fixture:** the same helper returning only `student_id`, progress counts and the last lesson.
 - **Expect:**

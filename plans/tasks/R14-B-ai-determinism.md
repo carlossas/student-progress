@@ -14,7 +14,7 @@
 - On an API error or timeout, the `ai` job fails with an error. It never passes silently (AGENTS#5).
 
 ## Test
-`tests/gate/ai/test_r14_ai_determinism.py::test_r14_ai_determinism` (`@pytest.mark.ai`)
+`tests/gate/ai/test_r14_ai_determinism_ai.py::test_r14_ai_determinism` (`@pytest.mark.ai`)
 - **Violation input:** the R01-B violation diff, reviewed 3 times.
 - **Compliant input:** the R01-B compliant diff, reviewed 3 times.
 - **Expect:**
