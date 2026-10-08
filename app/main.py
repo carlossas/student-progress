@@ -47,11 +47,16 @@ def get_progress(student_id: str):
 @app.post("/students/{student_id}/progress")
 def record_progress(student_id: str, payload: dict):
     student = _get_student(student_id)
+    if payload.get("lesson_id") not in {lesson.id for lesson in store.LESSONS}:
+        raise HTTPException(status_code=422, detail="unknown lesson")
+    score = int(payload.get("score", 0))
+    if score < 0 or score > 100:
+        raise HTTPException(status_code=422, detail="score must be between 0 and 100")
     record = ProgressRecord(
         student_id=student.id,
         lesson_id=payload["lesson_id"],
         completed=True,
-        score=int(payload.get("score", 0)),
+        score=score,
     )
     store.PROGRESS.append(record)
     logger.info("progress recorded %s", redact({"student_id": student.id, "lesson_id": record.lesson_id}))
