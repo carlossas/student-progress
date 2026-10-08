@@ -48,7 +48,7 @@ One-time setup:
 
 Every PR gets:
 - A summary comment with every finding and the run's cost.
-- Inline comments with the fix.
+- Inline comments with the fix. A re-run replaces them, so the PR only shows the latest run.
 - The two checks.
 
 Override (admin/maintain only, logged): comment `/gate-override <reason>`.

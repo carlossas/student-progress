@@ -35,8 +35,12 @@ class Finding:
         return f"{self.file}:{self.line}" if self.line else self.file
 
     def fingerprint(self) -> str:
-        """Stable id across runs, used to avoid re-posting the same inline comment."""
-        raw = f"{self.rule}|{self.check}|{self.file}|{self.line}|{self.message}"
+        """Stable id across runs, used to avoid re-posting the same inline comment.
+
+        The message isn't part of it: the AI words the same finding differently between runs, and
+        that used to post it again. Severity is, so a re-graded finding replaces the old comment.
+        """
+        raw = f"{self.rule}|{self.check}|{self.file}|{self.line}|{self.severity}"
         return hashlib.sha1(raw.encode()).hexdigest()[:12]
 
     def to_dict(self) -> dict:
