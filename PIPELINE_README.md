@@ -30,7 +30,7 @@ npm install                                             # pre-commit + pre-push 
 python -m gate all          # or: sh scripts/check-all.sh / .\scripts\check-all.ps1
 ```
 
-Runs pre-commit checks, lint, tests + coverage, the script pipeline, and the AI pipeline (only if `GEMINI_API_KEY` is set and valid). Exit 0 = READY, 1 = BLOCKED. Flags: `--fix`, `--no-ai`, `--base origin/main`.
+Runs pre-commit checks, lint, tests + coverage, the script pipeline, and the AI pipeline (only if `GEMINI_API_KEY` is set and valid: put it in `.env`, copied from `.env.example`). Exit 0 = READY, 1 = BLOCKED. Flags: `--fix`, `--no-ai`, `--base origin/main`.
 
 ## Other commands
 

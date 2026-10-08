@@ -162,6 +162,7 @@ flowchart TB
 | Module | Responsibility |
 |--------|----------------|
 | `gate/__main__.py`, `gate/local.py` | CLI: `all` (developer one-shot: pre-commit, lint, tests, both pipelines, one verdict), `lint`, `check`, `precommit`, `prepush`, `deterministic`, `smoke`, `ai`, `report`, `override`, `eval`. Wrappers: `scripts/check-all.sh`, `scripts/check-all.ps1`. |
+| `gate/env.py` | Loads the developer's local `.env` (gitignored; template `.env.example`) at CLI and pytest start-up; real environment variables (CI secrets) win. |
 | `gate/diff.py` | Changed files and lines from a git range, the index (hooks) or a fixture directory. |
 | `gate/deterministic/` | Pipeline A, one module per rule family (incl. `vendor_channel.py`: scaffolding for third-party channels with personal data, and `prompt_injection.py`); `runner.py` turns a crashing check into a blocking gate error. |
 | `gate/ai/` | Pipeline B: Gemini client with model fallback and output cap (`client.py`), prompts per rule (`prompts/`), structured output validation (`validate.py`), cost with prompt-cache pricing (`pricing.py`), result cache keyed by request hash (`review.py`). Details and cost strategy: [PIPELINES.md](PIPELINES.md). |
