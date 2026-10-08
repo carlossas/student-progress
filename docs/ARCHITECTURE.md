@@ -163,7 +163,7 @@ flowchart TB
 |--------|----------------|
 | `gate/__main__.py`, `gate/local.py` | CLI: `all` (developer one-shot: pre-commit, lint, tests, both pipelines, one verdict), `lint`, `check`, `precommit`, `prepush`, `deterministic`, `smoke`, `ai`, `report`, `override`, `eval`. Wrappers: `scripts/check-all.sh`, `scripts/check-all.ps1`. |
 | `gate/diff.py` | Changed files and lines from a git range, the index (hooks) or a fixture directory. |
-| `gate/deterministic/` | Pipeline A, one module per rule family; `runner.py` turns a crashing check into a blocking gate error. |
+| `gate/deterministic/` | Pipeline A, one module per rule family (incl. `vendor_channel.py`: scaffolding for third-party channels with personal data, and `prompt_injection.py`); `runner.py` turns a crashing check into a blocking gate error. |
 | `gate/ai/` | Pipeline B: Gemini client with model fallback and output cap (`client.py`), prompts per rule (`prompts/`), structured output validation (`validate.py`), cost with prompt-cache pricing (`pricing.py`), result cache keyed by request hash (`review.py`). Details and cost strategy: [PIPELINES.md](PIPELINES.md). |
 | `gate/report/` | Finding schema, tool adapters (`rule_map.yml`), severity → action policy (`actions.py`), pre-existing debt (`baseline.py`: a High code-quality finding on a line the PR only moved becomes Medium; privacy, secrets and tests are never demoted), GitHub publishing, override, per-run cost: AI + CI minutes (`cost.py`). |
 | `gate/eval/` | Runs the gate on each golden PR in a temporary worktree and scores it against `eval/ground_truth.yaml`: the merge verdict per PR (every finding counts, process rules included), then precision/recall on AGENTS#1-9. |

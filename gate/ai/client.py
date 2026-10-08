@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from google import genai
 from google.genai import errors, types
 
-from gate.ai.config import REQUEST_TIMEOUT_MS, SEED, TEMPERATURE, GeminiSettings
+from gate.ai.config import OUTPUT_ESCALATION, REQUEST_TIMEOUT_MS, SEED, TEMPERATURE, GeminiSettings
 from gate.ai.pricing import Usage
 
 log = logging.getLogger("gate.ai")
@@ -91,29 +91,42 @@ class GeminiClient:
 
     def generate_json(self, system: str, prompt: str, schema: dict) -> tuple[str, str, Usage]:
         """One structured review call. Returns (raw JSON text, model that served it, usage)."""
-        config = types.GenerateContentConfig(
-            system_instruction=system,
-            temperature=TEMPERATURE,
-            seed=SEED,
-            max_output_tokens=self.settings.max_output_tokens,
-            thinking_config=types.ThinkingConfig(thinking_level=self.settings.thinking_level),
-            response_mime_type="application/json",
-            response_json_schema=schema,
-            # No tools: a single structured answer. Also silences the SDK's AFC warning.
-            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
-        )
+
+        def config(cap: int) -> types.GenerateContentConfig:
+            return types.GenerateContentConfig(
+                system_instruction=system,
+                temperature=TEMPERATURE,
+                seed=SEED,
+                max_output_tokens=cap,
+                thinking_config=types.ThinkingConfig(thinking_level=self.settings.thinking_level),
+                response_mime_type="application/json",
+                response_json_schema=schema,
+                # No tools: a single structured answer. Also silences the SDK's AFC warning.
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+            )
+
+        ceiling = self.settings.max_output_tokens * OUTPUT_ESCALATION
         results: list[ModelStatus] = []
         for model in self.settings.models:
             last = None
-            for attempt in range(3):
+            cap, usage = self.settings.max_output_tokens, Usage(model=model)
+            attempt = 0
+            while attempt < 3:
                 try:
-                    res = self._client.models.generate_content(model=model, contents=prompt, config=config)
-                    usage = Usage(model=model).add(res.usage_metadata, model)
+                    res = self._client.models.generate_content(model=model, contents=prompt, config=config(cap))
+                    usage = usage.add(res.usage_metadata, model)  # a truncated try is billed too
                     finish = str(res.candidates[0].finish_reason) if res.candidates else ""
                     if "MAX_TOKENS" in finish:
+                        if cap * 2 <= ceiling:
+                            log.warning(
+                                "gemini %s hit the output cap (%d tokens); retrying with %d", model, cap, cap * 2
+                            )
+                            cap *= 2
+                            continue
                         raise OutputTruncated(
-                            f"{model} hit the output cap ({self.settings.max_output_tokens} tokens) before finishing "
-                            "the review. Raise the GEMINI_MAX_OUTPUT_TOKENS repo variable and re-run.",
+                            f"{model} hit the output cap ({cap} tokens, after doubling from "
+                            f"{self.settings.max_output_tokens}) before finishing the review. Raise the "
+                            "GEMINI_MAX_OUTPUT_TOKENS repo variable and re-run.",
                             results,
                         )
                     if not res.text:
@@ -133,6 +146,7 @@ class GeminiClient:
                             f"{model}: HTTP {last.code} {last.status} {last.message}", results
                         ) from e
                     time.sleep(2 * (attempt + 1))
+                    attempt += 1
             if last:
                 results.append(last)
         lines = "\n".join(f"  {r.model}: HTTP {r.code} {r.status} {r.quota} {r.retry_after}".rstrip() for r in results)
