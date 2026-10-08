@@ -178,6 +178,26 @@ def _run_cost(source: Path, publish: bool) -> dict:
     return result
 
 
+def critical_annotations(findings, on_pr: bool) -> list[str]:
+    """Workflow commands for Critical findings.
+
+    On a PR the inline comment already sits on the line, and GitHub keeps every workflow run's
+    line annotations in "Files changed", so each re-run added another copy. There it's one line
+    for the job log; per-line annotations only when there's no PR to comment on.
+    """
+    critical = [f for f in findings if f.severity == "critical"]
+    if on_pr:
+        return (
+            [f"::error title=Quality gate::{len(critical)} critical finding(s); see the PR comments."]
+            if critical
+            else []
+        )
+    return [
+        f"::error file={f.file}" + (f",line={f.line}" if f.line else "") + f",title={f.rule} critical::{f.message}"
+        for f in critical
+    ]
+
+
 def cmd_report(args) -> int:
     from gate.report.cost import render
 
@@ -194,10 +214,8 @@ def cmd_report(args) -> int:
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fh:
             fh.write(summary + "\n")
-    for f in findings:
-        if f.severity == "critical":
-            loc = f"file={f.file}" + (f",line={f.line}" if f.line else "")
-            print(f"::error {loc},title={f.rule} critical::{f.message}")
+    for line in critical_annotations(findings, on_pr=args.publish):
+        print(line)
     for e in errors:
         print(f"::error title=quality gate error::{e}")
     print_findings(findings)
