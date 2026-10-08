@@ -10,6 +10,7 @@ python -m gate eval --check-analysis # fail if any FP/FN lacks its written analy
 from __future__ import annotations
 
 import json
+import random
 import re
 import shutil
 import tempfile
@@ -139,6 +140,49 @@ def verdicts(truth: dict, findings_by_pr: dict[str, list[Finding]]) -> dict:
     }
 
 
+def permuted(items: list, seed: int) -> list:
+    """A reproducible reordering: the same content, presented to the model in another order."""
+    copy = list(items)
+    random.Random(seed).shuffle(copy)
+    return copy
+
+
+def stability(truth: dict, runs: list[dict[str, list[Finding]]]) -> dict:
+    """Merge verdict per PR across prompt variants (run 0 = the original order).
+
+    The seed makes identical prompts repeat; this measures whether the decision survives a
+    prompt that differs only in irrelevant ways (the order of the scripts' findings)."""
+    rows = []
+    for pr in truth["prs"]:
+        seen = ["block" if gate_blocks(run.get(pr["branch"], [])) else "pass" for run in runs]
+        rows.append({"branch": pr["branch"], "truth": pr["verdict"], "verdicts": seen, "stable": len(set(seen)) == 1})
+    return {
+        "rows": rows,
+        "variants": len(runs),
+        "flipped": sum(1 for r in rows if not r["stable"]),
+        "correct_per_variant": [verdicts(truth, run)["correct"] for run in runs],
+        "total": len(rows),
+    }
+
+
+def render_stability(st: dict) -> str:
+    lines = [
+        f"{st['variants']} prompt variants (run 0 = original order; runs 1+ shuffle the order of the scripts' findings and signals with a fixed seed).",
+        "",
+        "| PR | Truth | " + " | ".join(f"Run {i}" for i in range(st["variants"])) + " | Stable |",
+        "|---|---|" + "---|" * st["variants"] + "---|",
+    ]
+    for r in st["rows"]:
+        lines.append(
+            f"| `{r['branch']}` | {r['truth']} | "
+            + " | ".join(r["verdicts"])
+            + f" | {'yes' if r['stable'] else '**no**'} |"
+        )
+    per_run = ", ".join(f"{c}/{st['total']}" for c in st["correct_per_variant"])
+    lines += ["", f"Verdict flips: **{st['flipped']}/{st['total']} PRs**. Right merge call per run: {per_run}."]
+    return "\n".join(lines)
+
+
 def failure_ids(truth: dict, findings_by_pr: dict[str, list[Finding]]) -> list[dict]:
     """Every FP and FN with a stable id and the facts needed to analyze it."""
     out = []
@@ -218,7 +262,7 @@ def _slug(branch: str) -> str:
     return branch.replace("/", "-")
 
 
-def run_pr(pr: dict, base: str, use_ai: bool, reuse_ai: bool) -> dict:
+def run_pr(pr: dict, base: str, use_ai: bool, reuse_ai: bool, variants: int = 1) -> dict:
     from gate.deterministic import runner
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -244,7 +288,19 @@ def run_pr(pr: dict, base: str, use_ai: bool, reuse_ai: bool) -> dict:
                 json.dumps({"model": ai.model, "cost": ai.cost, "dropped": [r for _, r in ai.dropped]}, indent=2),
                 encoding="utf-8",
             )
-        return {"deterministic": result.findings, "ai": ai_findings, "errors": result.errors}
+        variant_ai: list[list[Finding]] = []
+        if use_ai and variants > 1:
+            from gate.ai.review import review
+
+            for seed in range(1, variants):
+                v = review(
+                    ctx,
+                    permuted(result.findings, seed),
+                    permuted(result.signals, seed),
+                    cache_dir=GATE_ROOT / ".gate-cache" / "ai",
+                )
+                variant_ai.append(v.findings)
+        return {"deterministic": result.findings, "ai": ai_findings, "variants": variant_ai, "errors": result.errors}
     finally:
         git(GATE_ROOT, "worktree", "remove", "--force", str(worktree))
         shutil.rmtree(tmp, ignore_errors=True)
@@ -321,14 +377,17 @@ def replace_section(text: str, name: str, content: str) -> str:
 def main(args) -> int:
     truth = yaml.safe_load((EVAL_DIR / "ground_truth.yaml").read_text(encoding="utf-8"))
     by_pipeline: dict[str, dict[str, list[Finding]]] = {p: {} for p in PIPELINES}
+    variant_runs: list[dict[str, list[Finding]]] = [{} for _ in range(max(args.variants, 1) - 1)]
     errors = []
     for pr in truth["prs"]:
         print(f"evaluating {pr['branch']} ...", flush=True)
-        out = run_pr(pr, args.base, args.ai, args.reuse_ai)
+        out = run_pr(pr, args.base, args.ai, args.reuse_ai, args.variants)
         errors += [f"{pr['branch']}: {e}" for e in out["errors"]]
         by_pipeline["deterministic"][pr["branch"]] = out["deterministic"]
         by_pipeline["ai"][pr["branch"]] = out["ai"]
         by_pipeline["combined"][pr["branch"]] = dedupe(out["deterministic"] + out["ai"])
+        for run, ai_variant in zip(variant_runs, out["variants"], strict=False):
+            run[pr["branch"]] = dedupe(out["deterministic"] + ai_variant)
 
     shown = "combined" if args.ai else "deterministic"
     results = render_results(truth, by_pipeline, args.ai)
@@ -336,6 +395,11 @@ def main(args) -> int:
     print(results)
     print()
     print(render_failures(failures))
+    stable_md = None
+    if args.ai and args.variants > 1:
+        stable_md = render_stability(stability(truth, [by_pipeline["combined"], *variant_runs]))
+        print()
+        print(stable_md)
     for e in errors:
         print(f"gate error: {e}")
 
@@ -343,6 +407,8 @@ def main(args) -> int:
         text = EVAL_MD.read_text(encoding="utf-8")
         text = replace_section(text, "results", results)
         text = replace_section(text, "failures", render_failures(failures))
+        if stable_md:
+            text = replace_section(text, "stability", stable_md)
         EVAL_MD.write_text(text, encoding="utf-8")
         print(f"updated {EVAL_MD.name}")
     if args.check_analysis:

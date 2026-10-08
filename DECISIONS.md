@@ -38,7 +38,7 @@ Critical/High = S1/S2 from TEAM-STANDARDS, nothing invented. Two calls came from
 
 ## ADR-4 · One Gemini call per PR, stable and cheap
 
-One structured call with temperature 0 and a fixed seed: temperature alone still flipped a High between runs. LOW thinking and a JSON schema. Findings with an unknown rule or a line outside the diff are dropped, never posted.
+One structured call with temperature 0 and a fixed seed: temperature alone still flipped a High between runs. The seed only makes *identical* prompts repeat: a prompt that differed in an irrelevant way (the order of the scripts' findings) flipped `score-validation` in CI. The fix was a sharper criterion, not more randomness control: ambiguous severity rules get resolved at random. The eval now measures stability across prompt variants (`--variants`). LOW thinking and a JSON schema. Findings with an unknown rule or a line outside the diff are dropped, never posted.
 Cost is ~$0.003 per review: cache by request hash, output capped at 2k tokens, large PRs split into ≤30k-token batches.
 
 ## ADR-5 · The eval's headline is the merge verdict

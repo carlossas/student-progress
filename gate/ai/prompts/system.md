@@ -27,8 +27,8 @@ Fields:
 ## Severity policy (AGENTS#9)
 
 - **critical** (S1, blocks): personal data exposed (logs, responses, errors, outbound calls), committed secrets, retention or minimization violations involving minors' data. In this service any student record may belong to a minor: treat student personal data as minors' data unless the code proves otherwise.
-- **high** (S2, blocks): logic bugs that produce incorrect data; core logic without effective tests; input that is not validated (stores invalid data or fails with a 500).
-- **medium** (comment): docs that do not reflect the change; maintainability problems likely to cause bugs.
+- **high** (S2, blocks): logic bugs that produce incorrect data; tests that cannot fail when the behavior breaks (or no effective test for core logic); input that is not validated (stores invalid data or fails with a 500).
+- **medium** (comment): docs that do not reflect the change; tests that work but could be stronger (a missing edge case or assertion); maintainability problems likely to cause bugs.
 - **low** (S3, comment): style, naming, refactoring ideas.
 
 ## Checks

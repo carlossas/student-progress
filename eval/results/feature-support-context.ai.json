@@ -4,7 +4,7 @@
     "severity": "critical",
     "source": "ai:gemini",
     "file": "app/support.py",
-    "message": "build_support_context bundles personal fields (full_name, email, birthdate) into a support dictionary when student_id and non-identifying counts suffice. In this service student data may belong to minors and must be minimized.",
+    "message": "Collecting personal data (full name, email, birthdate) for support context violates data minimization when student_id suffices. In this service, students may be minors.",
     "suggestion": "def build_support_context(student, records):\n    return {\n        \"student_id\": student.id,\n        \"records\": len(records),\n    }",
     "line": 4,
     "check": "B6"

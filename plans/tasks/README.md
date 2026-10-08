@@ -41,6 +41,8 @@ No task file: each has its own offline test.
 | Secrets masked before any Gemini request | `gate/deterministic/secrets_scan.py` (`mask_secrets`), `gate/ai/prompt_builder.py` | `tests/gate/deterministic/test_secret_masking.py` |
 | Severity refinements (copies of personal data Critical, A9 absorbs A10) | `gate/deterministic/pii_flow.py`, `gate/report/merge.py` | `tests/gate/deterministic/test_severity_refinements.py` |
 | Per-base status checks | `gate/config.py` (`status_contexts`) | R09-A, R14-A tests |
+| B8 severity: High only if tests cannot fail; "could be stronger" is Medium | `gate/ai/prompts/r06_test_quality.md` | `tests/gate/ai/test_r06_test_severity_ai.py` |
+| Verdict stability across prompt variants | `gate/eval/run_eval.py` (`--variants`) | `test_r12_stability_across_prompt_variants` |
 
 ## Rules without a task
 

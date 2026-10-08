@@ -4,7 +4,7 @@
     "severity": "critical",
     "source": "ai:gemini",
     "file": "app/archive.py",
-    "message": "Cohort analytics copies birthdate and is_minor when student_id and non-personal attributes (such as country) are sufficient. Storing personal attributes of potential minors violates data minimization.",
+    "message": "Cohort analytics copies birthdate, full_name, and is_minor into the archive when student_id and non-identifying attributes would suffice. In this service any student may be a minor, so collecting unneeded personal data violates data minimization.",
     "suggestion": "ARCHIVE.append({\n    \"student_id\": student.id,\n    \"country\": student.country,\n    \"lesson_id\": record.lesson_id,\n    \"score\": record.score,\n})",
     "line": 16,
     "check": "B6"

@@ -4,8 +4,8 @@
     "severity": "critical",
     "source": "ai:gemini",
     "file": "app/main.py",
-    "message": "Personal data (`student.email`) is logged in plain text. Any student may be a minor, violating privacy policy.",
-    "suggestion": "Remove student.email and student.full_name from logging, using only student.id.",
+    "message": "Personal data (`student.email`) is logged in plain text, potentially exposing a minor's contact information.",
+    "suggestion": "logger.info(\n    \"sync: progress recorded for student=%s lesson=%s score=%s\",\n    student.id,\n    record.lesson_id,\n    record.score,\n)",
     "line": 60,
     "check": "B1"
   }

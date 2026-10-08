@@ -4,19 +4,9 @@
     "severity": "high",
     "source": "ai:gemini",
     "file": "app/main.py",
-    "message": "When total lessons is 0, progress percentage defaults to 100 instead of 0. This incorrectly reports that a student has completed all lessons when no curriculum exists.",
-    "suggestion": "percentage = int(100 * completed / total) if total else 0",
+    "message": "When total lessons is 0, progress percentage defaults to 100 instead of 0. This reports unearned completion to students when no lessons exist.",
+    "suggestion": "percentage = round(100 * completed / total) if total else 0",
     "line": 38,
     "check": "B11"
-  },
-  {
-    "rule": "AGENTS#6",
-    "severity": "high",
-    "source": "ai:gemini",
-    "file": "tests/test_progress.py",
-    "message": "The test locks in the incorrect behavior by asserting that 0 total lessons results in 100% progress.",
-    "suggestion": "assert body[\"percentage\"] == 0",
-    "line": 30,
-    "check": "B8"
   }
 ]

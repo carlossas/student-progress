@@ -362,6 +362,12 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("eval", help="evaluate the gate on the golden PRs")
     p.add_argument("--ai", action="store_true", help="run the Gemini review too (costs credits)")
     p.add_argument("--reuse-ai", action="store_true", help="reuse cached AI results in eval/results/")
+    p.add_argument(
+        "--variants",
+        type=int,
+        default=1,
+        help="with --ai: N prompt variants (shuffled order) to measure verdict stability",
+    )
     p.add_argument("--base", default="main")
     p.add_argument("--write", action="store_true", help="update the generated sections of EVAL.md")
     p.add_argument("--check-analysis", action="store_true", help="fail if a FP/FN in EVAL.md lacks its analysis")
