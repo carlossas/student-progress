@@ -53,15 +53,40 @@ Per PR (combined):
 | `fix/progress-percentage` | block | block | 1 | 0 | 0 |
 <!-- eval:results:end -->
 
-- Right merge call on 8/8. Neither pipeline gets there alone.
+- Right merge call on 8/8, now measured with **fresh** Gemini calls (no cache) in 3 prompt variants (next section). Neither pipeline gets there alone.
+- Honest history of that number: the cached results said 8/8; the first fresh run in CI (`gate-eval`, 2026-10-08) said **7/8 with 1 false block**; after the B8 change below, fresh runs give 8/8 in every variant. See `fp-ci-pr2-b8-test-severity`.
 - 8 PRs is small: recall 16/18 has a 95% interval of about 0.67-0.97.
 
 ## Stability across prompt variants
 
 The fixed seed makes two identical prompts give the same answer. It says nothing about a prompt that changes in irrelevant ways, which happens every time the scripts' findings change. `python -m gate eval --ai --variants 3` re-runs the AI with the scripts' findings and signals shuffled and reports which merge verdicts flip.
 
+Same harness, fresh Gemini, before and after the B8 severity criterion:
+
+| B8 prompt | Run 0 (original order) | Run 1 | Run 2 | PRs whose verdict flips |
+|---|---|---|---|---|
+| Before ("missing edge cases" listed as High) | 7/8 (false block on `score-validation`) | 8/8 | 8/8 | **1/8** |
+| After (High only when tests cannot fail) | 8/8 | 8/8 | 8/8 | **0/8** |
+
+The "before" row reproduces the CI result exactly: the verdict of `score-validation` depended on the order of an unrelated list in the prompt. The criterion removed the ambiguity the model was resolving at random.
+
+Latest run (after):
+
 <!-- eval:stability:start -->
-_Not run yet._
+3 prompt variants (run 0 = original order; runs 1+ shuffle the order of the scripts' findings and signals with a fixed seed).
+
+| PR | Truth | Run 0 | Run 1 | Run 2 | Stable |
+|---|---|---|---|---|---|
+| `feature/lessons-pagination` | sound | pass | pass | pass | yes |
+| `feature/score-validation` | comment | pass | pass | pass | yes |
+| `fix/mobile-sync-visibility` | block | block | block | block | yes |
+| `feature/support-context` | block | block | block | block | yes |
+| `feature/email-reminders` | block | block | block | block | yes |
+| `feature/streaks` | block | block | block | block | yes |
+| `feature/analytics-archive` | block | block | block | block | yes |
+| `fix/progress-percentage` | block | block | block | block | yes |
+
+Verdict flips: **0/8 PRs**. Right merge call per run: 8/8, 8/8, 8/8.
 <!-- eval:stability:end -->
 
 ## Failure analysis
@@ -72,6 +97,10 @@ _Not run yet._
 | `fn-pr5-minors-to-sendgrid` | FN | `feature/email-reminders` | AGENTS#2 | high | - | `app/notifications.py:1` | reminder emails to students go to SendGrid; minors' addresses would leave the service with no minimization or legal basis |
 | `fn-pr7-minors-to-analytics` | FN | `feature/analytics-archive` | AGENTS#2 | critical | - | `app/archive.py:1` | minors' records, flagged with is_minor, handed to analytics without minimization or legal basis |
 <!-- eval:failures:end -->
+
+### fp-ci-pr2-b8-test-severity (fixed)
+**Why:** In the first fresh CI eval, Gemini added High `AGENTS#6` on `score-validation` (`tests/test_score_validation.py:18`): "doesn't assert the 200, no non-numeric case". The critique is fair, but those tests do fail when the validation breaks: it is Medium. The cached run never showed it because the prompt had changed (the scripts' findings it receives are different now), so the cache missed and a new sample came out. The seed makes identical prompts repeatable; it does not make the verdict robust to a different prompt. Precision stayed 1.00 because `AGENTS#6` is *acceptable* on this PR; only the merge-verdict metric caught it.
+**Change:** B8 now has an explicit criterion: **High only if the tests cannot fail** (trivial asserts, mocking the function under test, locking in a wrong behavior, no effective test); **"could be stronger" is Medium** (`gate/ai/prompts/r06_test_quality.md`, severity policy in `system.md`). Pinned by `tests/gate/ai/test_r06_test_severity_ai.py` (a score-validation-like fixture must not get a High; `streaks`-like tests that cannot fail must). The eval now measures prompt-variant stability: 1/8 flipping before, 0/8 after.
 
 ### fn-pr5-minors-to-sendgrid
 **Why:** It's scaffolding: nothing calls SendGrid yet, so the outbound script has nothing to match. The AI judged the code that exists, not what the module is for.
