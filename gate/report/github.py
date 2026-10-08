@@ -3,7 +3,7 @@
 Publishing is idempotent across re-runs: one sticky summary comment updated in place,
 inline comments posted once per finding fingerprint, statuses overwritten. The PR only shows
 the latest run: inline comments for findings that are gone (fixed, re-graded) are deleted, and
-older gate reviews are marked superseded.
+older gate reviews are hidden as outdated (GitHub can't delete a submitted review).
 """
 
 from __future__ import annotations
@@ -22,7 +22,8 @@ log = logging.getLogger("gate.github")
 STICKY_MARKER = "<!-- quality-gate:summary -->"
 FINDINGS_MARKER = re.compile(r"<!-- qg:findings (.*?) -->", re.S)
 INLINE_MARKER = re.compile(r"<!-- qg:(\w+) -->")
-SUPERSEDED = f"{STICKY_MARKER}\nSuperseded by a newer gate run. Current findings are in the pinned gate comment."
+# Body of a hidden old review: renders as nothing, and marks it as already handled.
+SUPERSEDED = f"{STICKY_MARKER}<!-- quality-gate:superseded -->"
 
 
 class GitHubError(RuntimeError):
@@ -112,6 +113,16 @@ class GitHub:
     def delete_review_comment(self, comment_id: int) -> None:
         self.request("DELETE", f"/repos/{self.repo}/pulls/comments/{comment_id}")
 
+    def hide_as_outdated(self, node_id: str) -> None:
+        """Collapse a review or comment in the PR, like GitHub's "Hide > Outdated"."""
+        api = self.api[: -len("/v3")] if self.api.endswith("/v3") else self.api  # GHES: /api/v3 -> /api
+        query = (
+            "mutation($id: ID!) { minimizeComment(input: {subjectId: $id, classifier: OUTDATED}) { clientMutationId } }"
+        )
+        res = self.request("POST", f"{api}/graphql", {"query": query, "variables": {"id": node_id}})
+        if (res or {}).get("errors"):
+            raise GitHubError(f"minimizeComment {node_id}: {res['errors']}")
+
     def collaborator_permission(self, user: str) -> str:
         return self.request("GET", f"/repos/{self.repo}/collaborators/{user}/permission").get("permission", "none")
 
@@ -177,7 +188,7 @@ def publish(
             log.warning("could not delete stale gate comment %s: %s", c["id"], e)
 
     # Gate reviews still showing a run's findings; only one that matches this run may stay.
-    live = [r for r in gh.reviews(number) if STICKY_MARKER in (r.get("body") or "") and r.get("body") != SUPERSEDED]
+    live = [r for r in gh.reviews(number) if STICKY_MARKER in (r.get("body") or "") and SUPERSEDED not in r["body"]]
     if decision.review_event is None:
         supersede_reviews(gh, number, live, dismiss=False)
         return
@@ -204,12 +215,13 @@ def publish(
 
 
 def supersede_reviews(gh: GitHub, number: int, reviews: list[dict], dismiss: bool) -> None:
-    """Older gate reviews list findings from older runs: blank them, and dismiss their request for changes."""
+    """Older gate reviews list findings from older runs: dismiss their request for changes, blank and hide them."""
     for review in reviews:
         try:
-            gh.update_review(number, review["id"], SUPERSEDED)
             if dismiss and review.get("state") == "CHANGES_REQUESTED":
                 gh.dismiss_review(number, review["id"], "Superseded by a newer gate run.")
+            gh.update_review(number, review["id"], SUPERSEDED)
+            gh.hide_as_outdated(review["node_id"])
         except GitHubError as e:
             log.warning("could not supersede gate review %s: %s", review["id"], e)
 
