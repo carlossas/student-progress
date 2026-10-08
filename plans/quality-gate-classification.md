@@ -106,7 +106,7 @@ Semgrep taint tracking only follows data inside one function, which is why Pipel
 | 17 | Pre-check before pushing | — | — | Husky hooks (section 6) |
 | 18 | Record decisions & AI usage | ✅ A16 | — | Low |
 | 19 | Respect the timebox | — | — | Process, not checkable |
-| 20 | Docs updated in same change | ✅ A14 | ✅ B9 | High (missing) / Medium (inaccurate) |
+| 20 | Docs updated in same change | ✅ A14 | ✅ B9 | Medium (missing or inaccurate; process rule, never blocks: DECISIONS ADR-3) |
 | 21 | Each rule in one place | — | ✅ B10 | Low |
 
 ## 5. Remaining checks
@@ -127,7 +127,7 @@ Semgrep taint tracking only follows data inside one function, which is why Pipel
 | A11 | 7 | Unused imports/variables, unreachable code | `ruff` (`F401`, `F841`), `vulture` | Medium |
 | A12 | 7 | `TODO`/`FIXME` without ticket ref | regex script | Medium |
 | A13 | 7 | Lint / format | `ruff check`, `ruff format --check` | Low |
-| A14 | 20 | `app/` changed but `docs/ARCHITECTURE.md` and `docs/API-AND-BUSINESS-RULES.md` not changed (refactors included) | Python script on diff | High |
+| A14 | 20 | `app/` changed but `docs/ARCHITECTURE.md` and `docs/API-AND-BUSINESS-RULES.md` not changed (refactors included) | Python script on diff | Medium |
 | A15 | 16 | Fresh-runner smoke test following the README (`pip install`, `pytest`, `uvicorn`, `GET /health`) | Actions job | Medium |
 | A16 | 18 | `DECISIONS.md` and `AI-USAGE.md` exist | script | Low |
 

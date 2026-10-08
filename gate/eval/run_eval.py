@@ -20,6 +20,7 @@ import yaml
 
 from gate.config import GATE_ROOT, SEVERITIES
 from gate.diff import DiffContext, git
+from gate.report.baseline import demote_preexisting
 from gate.report.finding import Finding, read_findings, write_json
 from gate.report.merge import dedupe
 
@@ -121,6 +122,32 @@ def metrics(truth: dict, findings_by_pr: dict[str, list[Finding]]) -> dict:
     }
 
 
+def gate_blocks(findings: list[Finding]) -> bool:
+    """What the PR author actually sees: any Critical/High blocks, whatever rule it comes from."""
+    return any(f.severity in ("critical", "high") for f in findings)
+
+
+def verdicts(truth: dict, findings_by_pr: dict[str, list[Finding]]) -> dict:
+    """Merge decision per PR vs the truth. Counts every finding, process rules included:
+    precision/recall only score AGENTS#1-9, so a process rule that blocks a sound PR
+    would otherwise be invisible (it was, until PR #12)."""
+    rows = []
+    for pr in truth["prs"]:
+        blocked = gate_blocks(findings_by_pr.get(pr["branch"], []))
+        expected = pr["verdict"] == "block"
+        rows.append({"branch": pr["branch"], "truth": pr["verdict"], "blocked": blocked, "ok": blocked == expected})
+    correct = sum(r["ok"] for r in rows)
+    false_blocks = sum(1 for r in rows if r["blocked"] and r["truth"] != "block")
+    missed_blocks = sum(1 for r in rows if not r["blocked"] and r["truth"] == "block")
+    return {
+        "rows": rows,
+        "correct": correct,
+        "total": len(rows),
+        "false_blocks": false_blocks,
+        "missed_blocks": missed_blocks,
+    }
+
+
 def failure_ids(truth: dict, findings_by_pr: dict[str, list[Finding]]) -> list[dict]:
     """Every FP and FN with a stable id and the facts needed to analyze it."""
     out = []
@@ -183,6 +210,19 @@ def _resolve(repo: Path, branch: str) -> str:
     raise RuntimeError(f"branch {branch} not found locally or on origin")
 
 
+def pr_head(repo: Path, pr: dict) -> str:
+    """The pinned commit when the ground truth has one, else the branch tip.
+
+    A golden PR must not move: if someone merges the base into the branch (GitHub's
+    "Update branch"), its diff suddenly contains the base's changes and the eval scores
+    a different PR than the one the ground truth describes.
+    """
+    if pr.get("head"):
+        git(repo, "rev-parse", "--verify", "--quiet", f"{pr['head']}^{{commit}}")
+        return pr["head"]
+    return _resolve(repo, pr["branch"])
+
+
 def _slug(branch: str) -> str:
     return branch.replace("/", "-")
 
@@ -191,7 +231,7 @@ def run_pr(pr: dict, base: str, use_ai: bool, reuse_ai: bool) -> dict:
     from gate.deterministic import runner
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    head = _resolve(GATE_ROOT, pr["branch"])
+    head = pr_head(GATE_ROOT, pr)
     tmp = Path(tempfile.mkdtemp(prefix="gate-eval-"))
     worktree = tmp / "wt"
     git(GATE_ROOT, "worktree", "add", "--detach", "--quiet", str(worktree), head)
@@ -202,7 +242,7 @@ def run_pr(pr: dict, base: str, use_ai: bool, reuse_ai: bool) -> dict:
         ai_path = RESULTS_DIR / f"{_slug(pr['branch'])}.ai.json"
         ai_findings: list[Finding] = []
         if use_ai and reuse_ai and ai_path.exists():
-            ai_findings = read_findings(ai_path)
+            ai_findings = demote_preexisting(read_findings(ai_path), ctx)  # cached before the policy existed
         elif use_ai:
             from gate.ai.review import review
 
@@ -224,13 +264,16 @@ def _fmt(value: float | None) -> str:
 
 
 def render_results(truth: dict, by_pipeline: dict[str, dict[str, list[Finding]]], ai_ran: bool) -> str:
-    lines = ["| Pipeline | Precision | Recall | TP | FP | FN | Severity agreement |", "|---|---|---|---|---|---|---|"]
+    lines = [
+        "| Pipeline | Merge verdict correct | False blocks | Missed blocks | Precision | Recall | TP | FP | FN | Severity agreement |",
+        "|---|---|---|---|---|---|---|---|---|---|",
+    ]
     for name, findings in by_pipeline.items():
         if name != "deterministic" and not ai_ran:
             continue
-        m = metrics(truth, findings)
+        m, v = metrics(truth, findings), verdicts(truth, findings)
         lines.append(
-            f"| {name} | {_fmt(m['precision'])} | {_fmt(m['recall'])} | {m['tp']} | {m['fp']} | {m['fn']} | {_fmt(m['severity_agreement'])} |"
+            f"| {name} | {v['correct']}/{v['total']} | {v['false_blocks']} | {v['missed_blocks']} | {_fmt(m['precision'])} | {_fmt(m['recall'])} | {m['tp']} | {m['fp']} | {m['fn']} | {_fmt(m['severity_agreement'])} |"
         )
     shown = "combined" if ai_ran else "deterministic"
     m = metrics(truth, by_pipeline[shown])
@@ -253,9 +296,8 @@ def render_results(truth: dict, by_pipeline: dict[str, dict[str, list[Finding]]]
     for pr in truth["prs"]:
         found = by_pipeline[shown].get(pr["branch"], [])
         s = score_pr(pr, found, truth)
-        blocking = any(f.severity in ("critical", "high") for f in found if f.rule in truth["scope_rules"])
         lines.append(
-            f"| `{pr['branch']}` | {pr['verdict']} | {'block' if blocking else 'pass'} | {len(s.tp)} | {len(s.fp)} | {len(s.fn)} |"
+            f"| `{pr['branch']}` | {pr['verdict']} | {'block' if gate_blocks(found) else 'pass'} | {len(s.tp)} | {len(s.fp)} | {len(s.fn)} |"
         )
     if not ai_ran:
         lines += ["", "_AI pipeline not run (no GEMINI_API_KEY or `--ai` not passed)._"]

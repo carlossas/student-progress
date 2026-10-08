@@ -1,7 +1,7 @@
 [
   {
     "rule": "AGENTS#20",
-    "severity": "high",
+    "severity": "medium",
     "source": "deterministic:change_policy",
     "file": "app/streaks.py",
     "message": "Service code changed but `docs/ARCHITECTURE.md`, `docs/API-AND-BUSINESS-RULES.md` were not updated.",

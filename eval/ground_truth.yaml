@@ -6,9 +6,15 @@
 # A finding matches an item when the rule is equal, the file is equal (when given) and the
 # line falls inside `lines` +/- line_window (file-level findings match any line of the file).
 #
-# Scored rules: the team standards (AGENTS#1-9). Process rules (#16 README, #18 records,
-# #20 docs) are reported by the gate but not scored: on these pre-gate branches they fire
-# on every PR by construction and would inflate precision.
+# head: the commit the ground truth describes. Golden PRs are pinned so they can't drift.
+# verdict: block (any Critical/High expected), comment (merge with comments), sound.
+# The harness compares it with the gate's real merge decision, counting EVERY finding the
+# gate posts, process rules included (that is how the PR #12 false block shows up).
+#
+# Precision/recall score the team standards only (AGENTS#1-9). Process rules (#16 README,
+# #18 records, #20 docs) are not in TEAM-STANDARDS.md and fire on almost every PR here, so
+# scoring them per finding would mostly measure bookkeeping. They're comment-only, and the
+# verdict metric checks that they never block.
 
 scope_rules: [AGENTS#1, AGENTS#2, AGENTS#3, AGENTS#4, AGENTS#5, AGENTS#6, AGENTS#7, AGENTS#8, AGENTS#9]
 line_window: 3
@@ -18,6 +24,7 @@ acceptable_everywhere:
 
 prs:
   - branch: feature/lessons-pagination
+    head: 386b2e1d2882820c82977cbfd7361d3aea6b6865
     title: Add pagination to lessons list
     body: The catalog will grow to hundreds of lessons; adds limit/offset with validation and tests.
     verdict: sound
@@ -27,18 +34,21 @@ prs:
       - {rule: AGENTS#6}                      # boundary cases (limit=100/101) could be tested
 
   - branch: feature/score-validation
+    head: 60a6090693bc327d90838943f13890ca803f37a0
     title: Validate lesson and score on progress recording
     body: We were accepting any lesson_id and out-of-range scores. Adds validation and tests.
-    verdict: block
+    verdict: comment
     expected:
-      # Decided 2026-10-07 after the first AI run (EVAL.md): the PR's new validation still lets a
-      # non-numeric score crash with a 500; the line is new and AGENTS#5 requires a 4xx.
-      - {id: pr2-score-500, rule: AGENTS#5, severity: high, file: app/main.py, lines: [50, 54],
-         why: "int(payload.get('score')) on a non-numeric score raises ValueError -> 500"}
+      # Changed twice (EVAL.md has the history). A non-numeric score still crashes with a 500,
+      # so the finding is real. But that int() was already on main: the PR only moved it while
+      # adding the validation it promised. Pre-existing debt gets a comment, not a block.
+      - {id: pr2-score-500, rule: AGENTS#5, severity: medium, file: app/main.py, lines: [50, 54],
+         why: "int(payload.get('score')) on a non-numeric score raises ValueError -> 500 (pre-existing, moved by the PR)"}
     acceptable:
       - {rule: AGENTS#6}                      # tests mutate shared in-memory state
 
   - branch: fix/mobile-sync-visibility
+    head: fa726eb00be931ad67a4b11f1282f1838563975f
     title: Add sync visibility for mobile progress bug
     body: Support reports progress not showing up after using the mobile app. Adds logging so reported cases can be traced.
     verdict: block
@@ -50,6 +60,7 @@ prs:
       - {rule: AGENTS#2}   # logs consumed by support = data leaving the service
 
   - branch: feature/support-context
+    head: dfabcaeb1fedc65330928a29271b00efb40c5bce   # pinned: the branch tip now has develop merged in (GitHub 'Update branch' on PR #10)
     title: "Support tooling: context on progress lookups"
     body: Support loses 20 minutes per ticket gathering data from 3 systems. This helper logs a compact context on each lookup.
     verdict: block
@@ -65,6 +76,7 @@ prs:
       - {rule: AGENTS#2}                         # minors' data handed to support tooling
 
   - branch: feature/email-reminders
+    head: e1732cb7b95d42ad36f1a5b00583fb61bea8c119
     title: Scaffolding for inactivity email reminders
     body: First step for email reminders. Scaffolding only, nothing is sent yet.
     verdict: block
@@ -77,10 +89,17 @@ prs:
          why: "TODO without a ticket"}
       - {id: pr5-no-tests, rule: AGENTS#6, severity: high,
          why: "new module without tests"}
-    acceptable:
-      - {rule: AGENTS#2}   # planned emails to a third party (SendGrid) without documented basis
+      # Added in the second ground-truth pass (was 'acceptable'). The module exists to send
+      # students' emails to SendGrid. For a minor that is personal data leaving the service to a
+      # third party with no minimization (guardian contact instead of the child's address) and
+      # no documented basis (COPPA wants verifiable parental consent). Scaffolding is the cheapest
+      # moment to catch it, so it blocks now.
+      - {id: pr5-minors-to-sendgrid, rule: AGENTS#2, severity: high, file: app/notifications.py, lines: [1, 13],
+         why: "reminder emails to students go to SendGrid; minors' addresses would leave the service with no minimization or legal basis"}
+    acceptable: []
 
   - branch: feature/streaks
+    head: b5133c29895d6a98ceb2e595b10c4e89093ac71f
     title: Lesson streak calculation
     body: Consecutive-day streak calculation for gamification. Includes tests.
     verdict: block
@@ -92,6 +111,7 @@ prs:
     acceptable: []
 
   - branch: feature/analytics-archive
+    head: d5ecfb126399ae9b214500ab71e75e5707a2264d
     title: Archive progress events for cohort analytics
     body: Analytics needs to slice cohorts without joins. Archives each progress event with student attributes.
     verdict: block
@@ -102,11 +122,15 @@ prs:
          why: "copies full_name, birthdate, is_minor for analytics"}
       - {id: pr7-no-tests, rule: AGENTS#6, severity: high,
          why: "new archive logic without tests"}
+      # Added in the second ground-truth pass (was 'acceptable'): the archive exists to be read
+      # by the analytics team and carries is_minor, so it hands minors' records to another team.
+      - {id: pr7-minors-to-analytics, rule: AGENTS#2, severity: critical, file: app/archive.py, lines: [1, 22],
+         why: "minors' records, flagged with is_minor, handed to analytics without minimization or legal basis"}
     acceptable:
-      - {rule: AGENTS#2}                       # minors' data handed to the analytics team
       - {rule: AGENTS#1, file: app/archive.py}
 
   - branch: fix/progress-percentage
+    head: a620c3832d9a587624814a2f9c0dd9a566345c92
     title: Fix percentage rounding inconsistencies
     body: The app reports percentages inconsistent with the backend. Unifies the calculation and covers the no-lessons edge case.
     verdict: block

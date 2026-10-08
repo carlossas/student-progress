@@ -30,16 +30,6 @@
     "check": "A9"
   },
   {
-    "rule": "AGENTS#20",
-    "severity": "high",
-    "source": "deterministic:change_policy",
-    "file": "app/notifications.py",
-    "message": "Service code changed but `docs/ARCHITECTURE.md`, `docs/API-AND-BUSINESS-RULES.md` were not updated.",
-    "suggestion": "Update the docs in the same PR: modules/diagrams/flows in ARCHITECTURE.md; endpoints, business rules and known gaps in API-AND-BUSINESS-RULES.md.",
-    "line": null,
-    "check": "A14"
-  },
-  {
     "rule": "AGENTS#7",
     "severity": "medium",
     "source": "deterministic:todo",
@@ -48,6 +38,16 @@
     "suggestion": "Create a ticket and reference it, e.g. `# TODO(OE-123): ...`, or do it now.",
     "line": 6,
     "check": "A12"
+  },
+  {
+    "rule": "AGENTS#20",
+    "severity": "medium",
+    "source": "deterministic:change_policy",
+    "file": "app/notifications.py",
+    "message": "Service code changed but `docs/ARCHITECTURE.md`, `docs/API-AND-BUSINESS-RULES.md` were not updated.",
+    "suggestion": "Update the docs in the same PR: modules/diagrams/flows in ARCHITECTURE.md; endpoints, business rules and known gaps in API-AND-BUSINESS-RULES.md.",
+    "line": null,
+    "check": "A14"
   },
   {
     "rule": "AGENTS#7",

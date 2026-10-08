@@ -37,7 +37,7 @@ Any new field that holds personal data (name, contact, birth/age, address, phone
    |----------|----------|--------|
    | **S1** | Personal data exposed (worse if it belongs to a minor), committed secrets, retention or minimization violations on minors' data | **Block** |
    | **S2** | Logic bugs that produce wrong data, core logic without effective tests | **Block** |
-   | **S3** | Style, naming, refactoring ideas | Comment only |
+   | **S3** | Style, naming, refactoring ideas, docs or records not updated, problems on lines the PR only moved | Comment only |
 
 10. **Use a deterministic check when one is enough.** Use the LLM only for judgment calls. Pattern-based problems (secrets, personal data in logs, missing `RETENTION_DAYS` entries) are caught by plain code first.
 11. **Every finding must be actionable.** It names the severity, file and line, the rule it breaks, and a suggested fix.

@@ -11,6 +11,9 @@ only carries the AGENTS.md rules the AI judges; script-only rules are left out.
 Large PRs: files over FULL_FILE_LINES are sent as changed hunks with HUNK_CONTEXT lines
 around them, generated files are left out, and the files are packed into batches that fit
 the input budget (GEMINI_MAX_INPUT_TOKENS); review.py sends one call per batch.
+
+Secrets: every file, context file and the PR text go through `mask_secrets` first. The model
+never needs the value to review the code, and the API is a third party.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ import re
 from pathlib import Path
 
 from gate.config import AGENTS_MD, is_excluded
+from gate.deterministic.secrets_scan import mask_secrets
 from gate.diff import DiffContext
 from gate.report.finding import Finding, Signal
 
@@ -133,7 +137,8 @@ def reviewable_files(ctx: DiffContext) -> list[str]:
 
 
 def file_section(ctx: DiffContext, path: str, context: int = HUNK_CONTEXT) -> str:
-    return "\n".join([f"### {path}", "```", numbered(ctx.read(path) or "", ctx.lines(path), context), "```", ""])
+    text = mask_secrets(ctx.read(path) or "")
+    return "\n".join([f"### {path}", "```", numbered(text, ctx.lines(path), context), "```", ""])
 
 
 def _findings_section(findings: list[Finding]) -> str:
@@ -167,14 +172,14 @@ def user_prompt(
     for path in CONTEXT_FILES:
         text = ctx.read(path)
         if text is not None and path not in all_files:
-            parts += [f"### {path}", "```", text.strip(), "```", ""]
+            parts += [f"### {path}", "```", mask_secrets(text).strip(), "```", ""]
     parts += [
         "</repository_context>",
         "",
         "<pull_request>",
-        f"Title: {ctx.pr_title or '(none)'}",
+        f"Title: {mask_secrets(ctx.pr_title) or '(none)'}",
         "Description:",
-        ctx.pr_body or "(none)",
+        mask_secrets(ctx.pr_body) or "(none)",
         "",
         "## Already reported by deterministic checks (do not repeat)",
         _findings_section(deterministic),
