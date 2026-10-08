@@ -18,8 +18,10 @@ def health():
 
 
 @app.get("/lessons")
-def list_lessons():
-    return [lesson.__dict__ for lesson in store.LESSONS]
+def list_lessons(limit: int = 50, offset: int = 0):
+    if limit < 1 or limit > 100 or offset < 0:
+        raise HTTPException(status_code=422, detail="invalid pagination params")
+    return [lesson.__dict__ for lesson in store.LESSONS[offset : offset + limit]]
 
 
 def _get_student(student_id: str):
