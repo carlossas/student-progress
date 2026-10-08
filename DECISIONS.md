@@ -51,7 +51,7 @@ Not built, but this is the order I'd do it in:
 1. **One shared gate**, versioned (backlog #1). Each repo only configures its PII fields and retention.
 2. **Bedrock instead of Gemini.** Code stays in our AWS account, access goes through IAM, no extra DPA. The client is already one interface; I'd re-run the eval before switching.
 3. **SLO + degraded mode** (backlog #4).
-4. **Cost at scale is CI, not the LLM.** 100 devs is ~900 runs/day: ~$4/day of AI vs ~$22/day of runner minutes, most of it per-job rounding. Fewer, merged jobs come first.
+4. **Cost at scale is CI, not the LLM.** 100 devs is ~900 runs/day: ~$4/day of AI vs ~$22/day of runner minutes, most of it per-job rounding. Fewer, merged jobs come first (backlog #10).
 5. **Measure in production.** Override rate, false blocks, time-to-merge. Every override becomes a fixture.
 6. **The gate is one layer.** In production: CloudWatch log data protection, Macie, PII tagged in the models.
 
@@ -66,3 +66,4 @@ Not built, but this is the order I'd do it in:
 7. **Fork PRs.** They get no secrets, so the AI job fails closed and the report can't comment.
 8. **Secret incident flow.** A committed secret should open an incident with the rotation steps, not just block.
 9. **The last known miss** (`fn-pr7-minors-to-analytics` in EVAL.md): a fixture where minimization is fine but the data goes to a third party.
+10. **Fewer CI jobs.** A gate run does about 1.5 minutes of real work but gets billed 4, because GitHub rounds every job up to a full minute and we have 4 of them. Putting the checks in one or two jobs should cut the CI bill roughly in half. It's free on this public repo, but on a private one CI is most of the bill, so I'd do this before switching to a cheaper model.
