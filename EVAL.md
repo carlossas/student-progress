@@ -55,6 +55,7 @@ Per PR (combined):
 
 - Right merge call on 8/8, now measured with **fresh** Gemini calls (no cache) in 3 prompt variants (next section). Neither pipeline gets there alone.
 - Honest history of that number: the cached results said 8/8; the first fresh run in CI (`gate-eval`, 2026-10-08) said **7/8 with 1 false block**; after the B8 change below, fresh runs give 8/8 in every variant. See `fp-ci-pr2-b8-test-severity`.
+- Latest CI run ([gate-eval](https://github.com/carlossas/student-progress/actions/runs/37729439791), 2026-10-08, `develop` at `f05964d`, 4096 output cap): the tables above, 12/12 AI tests, no review truncated. Gemini was slow that night: the AI tests took 7 min, and 19 min in the run before (I cancelled that one by mistake, thinking it was stuck). Usually it's under 3. Nothing failed, but a slow Gemini means a slow gate (DECISIONS.md backlog #4).
 - 8 PRs is small: recall 17/18 has a 95% interval of about 0.74-0.99.
 
 ## Stability across prompt variants
