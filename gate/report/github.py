@@ -163,7 +163,7 @@ def publish(
 
     # Keep one inline comment per current finding; delete repeats and findings that are gone.
     current = {f.fingerprint() for f in decision.inline}
-    posted, removed = set(), False
+    posted = set()
     for c in gh.review_comments(number):
         marks = INLINE_MARKER.findall(c.get("body") or "")
         if not marks:
@@ -173,13 +173,13 @@ def publish(
             continue
         try:
             gh.delete_review_comment(c["id"])
-            removed = True
         except GitHubError as e:
             log.warning("could not delete stale gate comment %s: %s", c["id"], e)
 
+    # Gate reviews still showing a run's findings; only one that matches this run may stay.
+    live = [r for r in gh.reviews(number) if STICKY_MARKER in (r.get("body") or "") and r.get("body") != SUPERSEDED]
     if decision.review_event is None:
-        if removed:
-            supersede_reviews(gh, number, keep=None, dismiss=False)
+        supersede_reviews(gh, number, live, dismiss=False)
         return
     valid = commentable_lines(gh.pr_files(number))
     comments, not_inline = [], []
@@ -190,29 +190,24 @@ def publish(
             comments.append({"path": f.file, "line": f.line, "side": "RIGHT", "body": comment_body(f)})
         else:
             not_inline.append(f)
-    new_blocking = any(
-        f.severity in ("critical", "high")
-        for f in [*decision.inline, *decision.summary_only]
-        if f.fingerprint() not in posted
-    )
-    if not comments and not not_inline and not new_blocking and not removed:
-        return  # nothing changed since the last run
-    body = [STICKY_MARKER, "Quality gate review. Full summary in the pinned gate comment."]
+    lines = [STICKY_MARKER, "Quality gate review. Full summary in the pinned gate comment."]
     for f in not_inline + [f for f in decision.summary_only if f.severity != "low"]:
-        body += ["", comment_body(f).replace(STICKY_MARKER, ""), f"<sub>at `{f.location}`</sub>"]
-    review = gh.create_review(number, sha, decision.review_event, "\n".join(body), comments) or {}
-    supersede_reviews(gh, number, keep=review.get("id"), dismiss=True)
+        lines += ["", comment_body(f).replace(STICKY_MARKER, ""), f"<sub>at `{f.location}`</sub>"]
+    body = "\n".join(lines)
+    state = "CHANGES_REQUESTED" if decision.review_event == "REQUEST_CHANGES" else "COMMENTED"
+    latest = live[-1] if live else None
+    if not comments and latest and latest.get("state") == state and latest.get("body") == body:
+        supersede_reviews(gh, number, live[:-1], dismiss=True)
+        return  # nothing changed since the last run
+    gh.create_review(number, sha, decision.review_event, body, comments)
+    supersede_reviews(gh, number, live, dismiss=True)
 
 
-def supersede_reviews(gh: GitHub, number: int, keep: int | None, dismiss: bool) -> None:
+def supersede_reviews(gh: GitHub, number: int, reviews: list[dict], dismiss: bool) -> None:
     """Older gate reviews list findings from older runs: blank them, and dismiss their request for changes."""
-    for review in gh.reviews(number):
-        body = review.get("body") or ""
-        if review.get("id") == keep or STICKY_MARKER not in body:
-            continue
+    for review in reviews:
         try:
-            if body != SUPERSEDED:
-                gh.update_review(number, review["id"], SUPERSEDED)
+            gh.update_review(number, review["id"], SUPERSEDED)
             if dismiss and review.get("state") == "CHANGES_REQUESTED":
                 gh.dismiss_review(number, review["id"], "Superseded by a newer gate run.")
         except GitHubError as e:
